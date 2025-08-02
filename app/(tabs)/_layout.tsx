@@ -1,9 +1,26 @@
+import React from 'react'
 import { Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../../src/context/ThemeContext'
+import { View, ActivityIndicator } from 'react-native'
 
 export default function TabLayout() {
-  const { theme } = useTheme()
+  const { theme, isLoading } = useTheme()
+
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#ffffff',
+        }}
+      >
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    )
+  }
 
   return (
     <Tabs
