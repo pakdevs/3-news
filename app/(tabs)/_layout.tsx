@@ -1,3 +1,4 @@
+// app/(tabs)/_layout.tsx
 import React from 'react'
 import { Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -26,7 +27,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName
+          let iconName: keyof typeof Ionicons.glyphMap = 'help-circle-outline' // fallback icon
 
           if (route.name === 'index') {
             iconName = focused ? 'home' : 'home-outline'
