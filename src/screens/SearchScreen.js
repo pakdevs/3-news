@@ -1,0 +1,334 @@
+import React, { useState, useEffect } from 'react'
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  FlatList,
+} from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
+import { useTheme } from '../context/ThemeContext'
+import { useApp } from '../context/AppContext'
+import NewsCard from '../components/NewsCard'
+import { searchArticles, categories } from '../data/newsData'
+
+export default function SearchScreen({ navigation }) {
+  const { theme } = useTheme()
+  const { markAsRead } = useApp()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [recentSearches, setRecentSearches] = useState([
+    'AI technology',
+    'climate change',
+    'space exploration',
+    'healthcare',
+  ])
+  const [selectedCategory, setSelectedCategory] = useState('all')
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      backgroundColor: theme.card,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginBottom: 16,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 16,
+      color: theme.text,
+      marginLeft: 12,
+    },
+    cancelButton: {
+      marginLeft: 12,
+    },
+    cancelText: {
+      color: theme.primary,
+      fontSize: 16,
+    },
+    filterTabs: {
+      marginBottom: 16,
+    },
+    filterScrollView: {
+      paddingHorizontal: 16,
+    },
+    filterTab: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      marginRight: 12,
+      borderRadius: 16,
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    activeFilterTab: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    filterTabText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    activeFilterTabText: {
+      color: '#fff',
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 16,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.text,
+      marginBottom: 16,
+    },
+    recentSearches: {
+      marginBottom: 24,
+    },
+    recentSearchItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      backgroundColor: theme.card,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    recentSearchText: {
+      flex: 1,
+      fontSize: 16,
+      color: theme.text,
+      marginLeft: 12,
+    },
+    trendingTopics: {
+      marginBottom: 24,
+    },
+    trendingItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      backgroundColor: theme.card,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    trendingText: {
+      flex: 1,
+      fontSize: 16,
+      color: theme.text,
+      marginLeft: 12,
+    },
+    trendingCount: {
+      fontSize: 14,
+      color: theme.textSecondary,
+    },
+    searchResults: {
+      flex: 1,
+    },
+    resultCount: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginBottom: 16,
+    },
+    noResults: {
+      textAlign: 'center',
+      fontSize: 16,
+      color: theme.textSecondary,
+      marginTop: 40,
+    },
+    suggestion: {
+      textAlign: 'center',
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginTop: 8,
+      fontStyle: 'italic',
+    },
+  })
+
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      setIsSearching(true)
+      const results = searchArticles(searchQuery)
+
+      // Filter by category if not 'all'
+      const filteredResults =
+        selectedCategory === 'all'
+          ? results
+          : results.filter((article) => article.category === selectedCategory)
+
+      setSearchResults(filteredResults)
+      setIsSearching(false)
+    } else {
+      setSearchResults([])
+      setIsSearching(false)
+    }
+  }, [searchQuery, selectedCategory])
+
+  const handleArticlePress = (article) => {
+    markAsRead(article.id)
+    navigation.navigate('ArticleDetail', { article })
+  }
+
+  const handleRecentSearch = (query) => {
+    setSearchQuery(query)
+  }
+
+  const clearSearch = () => {
+    setSearchQuery('')
+    setSearchResults([])
+  }
+
+  const filterCategories = [{ id: 'all', name: 'All', slug: 'all' }, ...categories]
+
+  const trendingTopics = [
+    { title: 'Artificial Intelligence', count: '2.5k' },
+    { title: 'Climate Change', count: '1.8k' },
+    { title: 'Space Exploration', count: '1.2k' },
+    { title: 'Cryptocurrency', count: '956' },
+    { title: 'Healthcare Innovation', count: '834' },
+  ]
+
+  const renderFilterTab = (category) => (
+    <TouchableOpacity
+      key={category.id}
+      style={[styles.filterTab, selectedCategory === category.slug && styles.activeFilterTab]}
+      onPress={() => setSelectedCategory(category.slug)}
+    >
+      <Text
+        style={[
+          styles.filterTabText,
+          selectedCategory === category.slug && styles.activeFilterTabText,
+        ]}
+      >
+        {category.name}
+      </Text>
+    </TouchableOpacity>
+  )
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color={theme.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search news, topics, authors..."
+            placeholderTextColor={theme.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus={true}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch}>
+              <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Filter Tabs */}
+        {searchQuery.length > 0 && (
+          <View style={styles.filterTabs}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterScrollView}
+            >
+              {filterCategories.map(renderFilterTab)}
+            </ScrollView>
+          </View>
+        )}
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {searchQuery.length === 0 ? (
+          // Default Search Screen
+          <>
+            {/* Recent Searches */}
+            <View style={styles.recentSearches}>
+              <Text style={styles.sectionTitle}>Recent Searches</Text>
+              {recentSearches.map((search, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.recentSearchItem}
+                  onPress={() => handleRecentSearch(search)}
+                >
+                  <Ionicons name="time-outline" size={20} color={theme.textSecondary} />
+                  <Text style={styles.recentSearchText}>{search}</Text>
+                  <Ionicons name="arrow-up-outline" size={16} color={theme.textSecondary} />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Trending Topics */}
+            <View style={styles.trendingTopics}>
+              <Text style={styles.sectionTitle}>Trending Topics</Text>
+              {trendingTopics.map((topic, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.trendingItem}
+                  onPress={() => handleRecentSearch(topic.title)}
+                >
+                  <Ionicons name="trending-up" size={20} color={theme.primary} />
+                  <Text style={styles.trendingText}>{topic.title}</Text>
+                  <Text style={styles.trendingCount}>{topic.count}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        ) : (
+          // Search Results
+          <View style={styles.searchResults}>
+            {isSearching ? (
+              <Text style={styles.resultCount}>Searching...</Text>
+            ) : (
+              <>
+                <Text style={styles.resultCount}>
+                  {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+                  {selectedCategory !== 'all' &&
+                    ` in ${filterCategories.find((cat) => cat.slug === selectedCategory)?.name}`}
+                </Text>
+
+                {searchResults.length > 0 ? (
+                  searchResults.map((article) => (
+                    <NewsCard
+                      key={article.id}
+                      article={article}
+                      onPress={() => handleArticlePress(article)}
+                      size="large"
+                    />
+                  ))
+                ) : (
+                  <>
+                    <Text style={styles.noResults}>No articles found for "{searchQuery}"</Text>
+                    <Text style={styles.suggestion}>
+                      Try searching for different keywords or check spelling
+                    </Text>
+                  </>
+                )}
+              </>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  )
+}
