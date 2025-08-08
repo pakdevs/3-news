@@ -1,12 +1,11 @@
-// Minimal analytics abstraction (no network). Replace with real provider later.
+// Minimal analytics abstraction (no-op). Replace with real provider later.
 export type AnalyticsEvent = {
   name: string
   params?: Record<string, any>
 }
 
-export const logEvent = (event: AnalyticsEvent) => {
-  // eslint-disable-next-line no-console
-  if (__DEV__) console.log('[analytics]', event.name, event.params || {})
+export const logEvent = (_event: AnalyticsEvent) => {
+  // Intentionally no-op in this build
 }
 
 export const screenView = (screenName: string) =>

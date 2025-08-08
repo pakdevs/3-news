@@ -62,8 +62,7 @@ export const ThemeProvider = ({ children }) => {
       if (savedTheme !== null) {
         setIsDark(savedTheme === 'dark')
       }
-    } catch (error) {
-      console.error('Error loading theme:', error)
+    } catch (_error) {
     } finally {
       setIsLoading(false)
     }
@@ -74,9 +73,7 @@ export const ThemeProvider = ({ children }) => {
       const newTheme = !isDark
       setIsDark(newTheme)
       await AsyncStorage.setItem('theme', newTheme ? 'dark' : 'light')
-    } catch (error) {
-      console.error('Error saving theme:', error)
-    }
+    } catch (_error) {}
   }
 
   const value = {

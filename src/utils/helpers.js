@@ -1,93 +1,19 @@
-// Notification utilities
-import * as Notifications from 'expo-notifications'
-import * as Device from 'expo-device'
-import Constants from 'expo-constants'
-
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-})
-
+// Notification utilities (disabled in Expo Go / current build)
+// These functions are no-ops to avoid Expo Go warnings for SDK 53.
 export async function registerForPushNotificationsAsync() {
-  let token
-
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-    })
-  }
-
-  if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync()
-    let finalStatus = existingStatus
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync()
-      finalStatus = status
-    }
-
-    if (finalStatus !== 'granted') {
-      alert('Failed to get push token for push notification!')
-      return
-    }
-
-    token = (
-      await Notifications.getExpoPushTokenAsync({
-        projectId: Constants.expoConfig.extra.eas.projectId,
-      })
-    ).data
-  } else {
-    alert('Must use physical device for Push Notifications')
-  }
-
-  return token
+  return null
 }
 
-export async function scheduleNotification(title, body, data = {}) {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title,
-      body,
-      data,
-    },
-    trigger: { seconds: 2 },
-  })
+export async function scheduleNotification(_title, _body, _data = {}) {
+  return
 }
 
 export async function scheduleDailyDigest() {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Your Daily News Digest',
-      body: "Check out today's top stories and breaking news",
-      data: { type: 'daily_digest' },
-    },
-    trigger: {
-      hour: 8,
-      minute: 0,
-      repeats: true,
-    },
-  })
+  return
 }
 
-export async function scheduleBreakingNews(article) {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: '🚨 Breaking News',
-      body: article.title,
-      data: {
-        type: 'breaking_news',
-        articleId: article.id,
-      },
-    },
-    trigger: { seconds: 1 },
-  })
+export async function scheduleBreakingNews(_article) {
+  return
 }
 
 // Date utilities

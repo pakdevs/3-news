@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
@@ -153,9 +153,24 @@ export default function BookmarksScreen({ navigation }) {
       },
       {
         text: 'Export Bookmarks',
-        onPress: () => {
-          // Implement export functionality
-          Alert.alert('Export', 'Export functionality coming soon!')
+        onPress: async () => {
+          try {
+            const payload = JSON.stringify(
+              bookmarks.map((a) => ({
+                id: String(a.id),
+                title: a.title,
+                url: a.url || a.imageUrl,
+              })),
+              null,
+              2
+            )
+            await Share.share({
+              title: 'Bookmarks.json',
+              message: payload,
+            })
+          } catch (e) {
+            Alert.alert('Export Failed', 'Unable to export bookmarks at this time.')
+          }
         },
       },
       { text: 'Cancel', style: 'cancel' },
@@ -180,7 +195,7 @@ export default function BookmarksScreen({ navigation }) {
             ? 'Start bookmarking articles you want to read again. Tap the bookmark icon on any article to save it here.'
             : 'Save articles to read later when you have more time. Use the "Read Later" option in the article menu.'}
         </Text>
-        <TouchableOpacity style={styles.exploreButton} onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity style={styles.exploreButton} onPress={() => navigation.push('/')}>
           <Text style={styles.exploreButtonText}>Explore News</Text>
         </TouchableOpacity>
       </View>

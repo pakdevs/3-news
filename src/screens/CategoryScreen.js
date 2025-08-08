@@ -5,17 +5,33 @@ import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
 import NewsCard from '../components/NewsCard'
-import { getArticlesByCategory, categories } from '../data/newsData'
+import { Linking } from 'react-native'
+import { APP_CONFIG } from '../utils/config'
+import { getCategoryArticles as getLocalByCategory, categories } from '../data/newsData'
+import { getCategoryArticles } from '../utils/api'
 
 export default function CategoryScreen({ navigation, route }) {
   const { categorySlug, categoryName } = route.params
   const { theme } = useTheme()
   const { markAsRead, isFollowingTopic, followTopic, unfollowTopic } = useApp()
   const [refreshing, setRefreshing] = useState(false)
+  const [articles, setArticles] = useState(getLocalByCategory(categorySlug))
   const [sortBy, setSortBy] = useState('newest')
 
-  const articles = getArticlesByCategory(categorySlug)
   const category = categories.find((cat) => cat.slug === categorySlug)
+  React.useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const remote = await getCategoryArticles(categorySlug).catch(() => [])
+        if (!active) return
+        if (remote && remote.length) setArticles(remote)
+      } catch {}
+    })()
+    return () => {
+      active = false
+    }
+  }, [categorySlug])
 
   const styles = StyleSheet.create({
     container: {
@@ -154,14 +170,26 @@ export default function CategoryScreen({ navigation, route }) {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true)
-    // Simulate loading new data
-    setTimeout(() => {
-      setRefreshing(false)
-    }, 1000)
-  }, [])
+    ;(async () => {
+      try {
+        const remote = await getCategoryArticles(categorySlug).catch(() => [])
+        if (remote && remote.length) setArticles(remote)
+      } finally {
+        setRefreshing(false)
+      }
+    })()
+  }, [categorySlug])
 
-  const handleArticlePress = (article) => {
+  const handleArticlePress = async (article) => {
     markAsRead(article.id)
+    const tryExternal = APP_CONFIG?.content?.openExternalOnTap
+    const url = article?.sourceUrl || article?.url || article?.link
+    if (tryExternal && url) {
+      try {
+        const can = await Linking.canOpenURL(url)
+        if (can) return await Linking.openURL(url)
+      } catch {}
+    }
     navigation.navigate('ArticleDetail', { article })
   }
 

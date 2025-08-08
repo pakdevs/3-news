@@ -34,6 +34,56 @@ export const AppProvider = ({ children }) => {
     loadAppData()
   }, [])
 
+  // Monitor network connectivity and reflect it in isOffline
+  useEffect(() => {
+    let mounted = true
+    let intervalId = null
+    let subscription = null
+
+    async function checkOnce(Network) {
+      try {
+        const state = await Network.getNetworkStateAsync()
+        if (!mounted) return
+        const connected = !!state?.isConnected
+        setIsOffline(!connected)
+      } catch (e) {
+        // If network state cannot be determined, do not flip existing state
+      }
+    }
+
+    ;(async () => {
+      try {
+        const Network = require('expo-network')
+        // Initial check
+        await checkOnce(Network)
+
+        // Subscribe if supported; otherwise, fallback to polling
+        if (typeof Network.addNetworkStateListener === 'function') {
+          subscription = Network.addNetworkStateListener((state) => {
+            const connected = !!state?.isConnected
+            if (mounted) setIsOffline(!connected)
+          })
+        } else {
+          // Poll every 15s as a conservative fallback
+          intervalId = setInterval(() => checkOnce(Network), 15000)
+        }
+      } catch (e) {
+        // expo-network may not be available in some environments; ignore
+      }
+    })()
+
+    return () => {
+      mounted = false
+      if (intervalId) clearInterval(intervalId)
+      // Handle multiple possible unsubscribe shapes
+      try {
+        if (subscription?.remove) subscription.remove()
+        // Some APIs return a function
+        if (typeof subscription === 'function') subscription()
+      } catch {}
+    }
+  }, [])
+
   const loadAppData = async () => {
     try {
       const [
@@ -105,17 +155,13 @@ export const AppProvider = ({ children }) => {
       }
       const dataSaverRaw = await AsyncStorage.getItem('dataSaver')
       if (dataSaverRaw !== null) setDataSaver(dataSaverRaw === 'true')
-    } catch (error) {
-      console.error('Error loading app data:', error)
-    }
+    } catch (_error) {}
   }
 
   const saveData = async (key, data) => {
     try {
       await AsyncStorage.setItem(key, JSON.stringify(data))
-    } catch (error) {
-      console.error(`Error saving ${key}:`, error)
-    }
+    } catch (_error) {}
   }
 
   const addBookmark = (article) => {
@@ -246,9 +292,7 @@ export const AppProvider = ({ children }) => {
     try {
       setOfflineArticles([])
       await AsyncStorage.setItem('offlineArticles', JSON.stringify([]))
-    } catch (e) {
-      console.error('Error clearing offline articles:', e)
-    }
+    } catch (_e) {}
   }
 
   const login = (userData) => {

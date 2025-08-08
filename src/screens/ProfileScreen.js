@@ -187,33 +187,33 @@ export default function ProfileScreen({ navigation }) {
     {
       icon: 'person-outline',
       title: 'Edit Profile',
-      onPress: () => Alert.alert('Coming Soon', 'Edit profile feature coming soon!'),
+      onPress: () => navigation.navigate('Settings'),
     },
     {
       icon: 'notifications-outline',
       title: 'Notification Settings',
-      onPress: () => Alert.alert('Coming Soon', 'Notification settings coming soon!'),
+      onPress: () => navigation.navigate('Settings'),
     },
     {
       icon: 'heart-outline',
       title: 'Following',
       subtitle: `${followedTopics.length + followedAuthors.length} topics & authors`,
-      onPress: () => Alert.alert('Coming Soon', 'Following management coming soon!'),
+      onPress: () => navigation.navigate('Sections'),
     },
     {
       icon: 'download-outline',
       title: 'Offline Reading',
-      onPress: () => Alert.alert('Coming Soon', 'Offline reading settings coming soon!'),
+      onPress: () => navigation.navigate('Downloads'),
     },
     {
       icon: 'shield-outline',
       title: 'Privacy & Security',
-      onPress: () => Alert.alert('Coming Soon', 'Privacy settings coming soon!'),
+      onPress: () => navigation.navigate('Settings'),
     },
     {
       icon: 'help-circle-outline',
       title: 'Help & Support',
-      onPress: () => Alert.alert('Coming Soon', 'Help & support coming soon!'),
+      onPress: () => navigation.navigate('About'),
     },
     {
       icon: 'information-circle-outline',
@@ -264,7 +264,7 @@ export default function ProfileScreen({ navigation }) {
               <View style={[styles.avatar, styles.defaultAvatar]}>
                 <Ionicons name="person" size={40} color="#fff" />
               </View>
-              <Text style={styles.userName}>Welcome to NewsApp</Text>
+              <Text style={styles.userName}>Welcome to The Pakistan Tribune</Text>
               <Text style={styles.userEmail}>Sign in to personalize your experience</Text>
               <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
                 <Text style={styles.signInButtonText}>Sign In</Text>

@@ -262,7 +262,7 @@ export default function LoginScreen({ navigation }) {
   }
 
   const handleSocialLogin = (provider) => {
-    Alert.alert('Coming Soon', `${provider} login will be available soon!`)
+    Alert.alert('Unavailable', `${provider} login isn't available in this build.`)
   }
 
   const handleContinueAsGuest = () => {
@@ -297,7 +297,7 @@ export default function LoginScreen({ navigation }) {
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Welcome Section */}
           <View style={styles.welcomeSection}>
-            <Text style={styles.logo}>NewsApp</Text>
+            <Text style={styles.logo}>The Pakistan Tribune</Text>
             <Text style={styles.welcomeTitle}>
               {isSignUp ? 'Create your account' : 'Welcome back'}
             </Text>

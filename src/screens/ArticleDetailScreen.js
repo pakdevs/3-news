@@ -9,6 +9,7 @@ import {
   Dimensions,
   Alert,
 } from 'react-native'
+import { Linking } from 'react-native'
 import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -315,7 +316,7 @@ export default function ArticleDetailScreen({ navigation, route }) {
     try {
       const result = await Share.share({
         message: `Check out this article: ${article.title}\n\n${article.summary}`,
-        url: `https://newsapp.com/article/${article.id}`,
+        url: `https://pakistantribune.example.com/article/${article.id}`,
         title: article.title,
       })
     } catch (error) {
@@ -325,6 +326,15 @@ export default function ArticleDetailScreen({ navigation, route }) {
 
   const handleLike = () => {
     setLiked(!liked)
+  }
+
+  const handleOpenSource = async () => {
+    const url = rawArticle?.sourceUrl
+    if (!url) return
+    try {
+      const can = await Linking.canOpenURL(url)
+      if (can) await Linking.openURL(url)
+    } catch {}
   }
 
   const handleFollowAuthor = () => {
@@ -505,6 +515,15 @@ export default function ArticleDetailScreen({ navigation, route }) {
             <Ionicons name="download-outline" size={24} color={theme.textSecondary} />
             <Text style={styles.actionButtonText}>Save Offline</Text>
           </TouchableOpacity>
+
+          {rawArticle?.sourceUrl ? (
+            <TouchableOpacity style={styles.actionButton} onPress={handleOpenSource}>
+              <Ionicons name="open-outline" size={24} color={theme.textSecondary} />
+              <Text style={styles.actionButtonText}>
+                Read on {rawArticle?.sourceName ? String(rawArticle.sourceName) : 'source'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
 
           <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
             <Ionicons name="share-outline" size={24} color={theme.textSecondary} />

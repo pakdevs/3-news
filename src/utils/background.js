@@ -36,7 +36,7 @@ async function fetchAndStoreOfflineArticles() {
       const isWifi = state?.type === Network.NetworkStateType.WIFI || state?.type === 'WIFI'
       const isConnected = !!state?.isConnected
       if (!isConnected || !isWifi) {
-        if (__DEV__) console.log('[bg] Skipping prefetch: Wi‑Fi only is enabled and not on Wi‑Fi')
+        // Skipping prefetch: Wi‑Fi only is enabled and not on Wi‑Fi
         return { skipped: true, reason: 'wifiOnly' }
       }
     }
@@ -95,12 +95,9 @@ async function fetchAndStoreOfflineArticles() {
     await AsyncStorage.setItem('offlineArticles', JSON.stringify(capped))
     await AsyncStorage.setItem('offline.lastRefreshed', new Date().toISOString())
   } catch (e) {
-    if (__DEV__) console.warn('[bg] Failed to write offlineArticles:', e?.message || e)
-    // If write fails, surface as failure to the scheduler path
+    // Failed to persist offline articles
     throw e
   }
-
-  if (__DEV__) console.log(`[bg] Prefetch complete: stored ${capped.length} articles`)
   return { skipped: false, stored: capped.length }
 }
 
@@ -122,7 +119,7 @@ export async function registerBackgroundFetchAsync() {
   try {
     // Skip in Expo Go; background fetch APIs are not available there
     if (Constants?.appOwnership === 'expo') {
-      if (__DEV__) console.log('[bg] Skipping background registration in Expo Go')
+      // Skipping background registration in Expo Go
       return false
     }
     ensureTaskDefined()
@@ -156,7 +153,6 @@ export async function runPrefetchNow() {
     const result = await fetchAndStoreOfflineArticles()
     return result
   } catch (e) {
-    if (__DEV__) console.warn('[bg] runPrefetchNow failed:', e?.message || e)
     return { error: true }
   }
 }

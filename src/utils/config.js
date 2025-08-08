@@ -1,14 +1,16 @@
 // App configuration
 export const APP_CONFIG = {
-  name: 'NewsApp',
+  name: 'The Pakistan Tribune',
   version: '1.0.0',
   description: 'Stay informed, stay connected',
 
   // API Configuration (for future use)
   api: {
-    baseUrl: 'https://api.newsapp.com',
+    baseUrl: 'https://tribune-server.vercel.app/api',
     timeout: 10000,
     retries: 3,
+    // Default cache TTL for API responses (ms)
+    cacheTtlMs: 5 * 60 * 1000,
   },
 
   // Feature flags
@@ -31,6 +33,8 @@ export const APP_CONFIG = {
     maxSearchHistory: 20,
     defaultCategory: 'top',
     supportedLanguages: ['en'],
+    // If true, tapping a story will open the original source URL in the browser (when available)
+    openExternalOnTap: true,
   },
 
   // Notification configuration
@@ -99,18 +103,18 @@ export const APP_CONFIG = {
 
   // Social media links
   social: {
-    website: 'https://newsapp.com',
-    twitter: 'https://twitter.com/newsapp',
-    facebook: 'https://facebook.com/newsapp',
-    instagram: 'https://instagram.com/newsapp',
-    email: 'support@newsapp.com',
+    website: 'https://pakistantribune.example.com',
+    twitter: 'https://twitter.com/PakTribuneApp',
+    facebook: 'https://facebook.com/PakTribuneApp',
+    instagram: 'https://instagram.com/PakTribuneApp',
+    email: 'support@pakistantribune.example.com',
   },
 
   // Legal links
   legal: {
-    privacy: 'https://newsapp.com/privacy',
-    terms: 'https://newsapp.com/terms',
-    cookies: 'https://newsapp.com/cookies',
+    privacy: 'https://pakistantribune.example.com/privacy',
+    terms: 'https://pakistantribune.example.com/terms',
+    cookies: 'https://pakistantribune.example.com/cookies',
   },
 
   // Analytics events
@@ -238,4 +242,10 @@ export const STORAGE_KEYS = {
   preferences: 'user_preferences',
   searchHistory: 'search_history',
   onboardingCompleted: 'onboarding_completed',
+  // Namespaced cache keys for API responses
+  cache: {
+    top: 'cache.top.v1',
+    categoryPrefix: 'cache.category.v1.',
+    searchPrefix: 'cache.search.v1.',
+  },
 }

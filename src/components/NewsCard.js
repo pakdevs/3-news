@@ -162,10 +162,7 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
 
   const handleBookmark = (e) => {
     e.stopPropagation()
-    if (!articleId) {
-      console.warn('No article ID available for bookmarking')
-      return
-    }
+    if (!articleId) return
     if (isBookmarked(articleId)) {
       removeBookmark(articleId)
     } else {
@@ -191,8 +188,7 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
         month: 'short',
         day: 'numeric',
       })
-    } catch (error) {
-      console.warn('Date formatting error:', error)
+    } catch (_error) {
       return 'Invalid date'
     }
   }
@@ -206,8 +202,7 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
         return (numValue / 1000).toFixed(1) + 'k'
       }
       return String(numValue)
-    } catch (error) {
-      console.warn('Number formatting error:', error)
+    } catch (_error) {
       return '0'
     }
   }

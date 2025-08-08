@@ -1,23 +1,22 @@
 import React, { useEffect, useState } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  FlatList,
-  Dimensions,
-} from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
 import NewsCard from '../components/NewsCard'
 import { ListSkeleton } from '../components/Skeletons'
+import OfflineBanner from '../components/OfflineBanner'
 import { FlashList } from '@shopify/flash-list'
-import { newsArticles, breakingNews, categories } from '../data/newsData'
+import {
+  newsArticles as localArticles,
+  breakingNews as localBreaking,
+  categories,
+} from '../data/newsData'
+import { getTopArticles } from '../utils/api'
 import sanitizeArticle from '../utils/sanitizeArticle'
+import { Linking } from 'react-native'
+import { APP_CONFIG } from '../utils/config'
 import { screenView } from '../utils/analytics'
 
 const { width } = Dimensions.get('window')
@@ -25,17 +24,38 @@ const { width } = Dimensions.get('window')
 export default function HomeScreen({ navigation }) {
   const { theme } = useTheme()
   // Pull all needed values from useApp at the top level (do not call hooks inside helpers)
-  const { markAsRead, followedTopics } = useApp()
+  const { markAsRead, followedTopics, isOffline } = useApp()
   const [refreshing, setRefreshing] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('top')
   const [feedTab, setFeedTab] = useState('top') // 'top' | 'foryou' | 'trending'
   const [loading, setLoading] = useState(true)
+  const [articles, setArticles] = useState(localArticles)
+  const [breaking, setBreaking] = useState(localBreaking)
 
   useEffect(() => {
-    // Simulate initial fetch
-    const t = setTimeout(() => setLoading(false), 600)
-    screenView('Home')
-    return () => clearTimeout(t)
+    let isMounted = true
+    async function load() {
+      screenView('Home')
+      try {
+        const remote = await getTopArticles().catch(() => [])
+        if (!isMounted) return
+        if (remote && remote.length) {
+          setArticles(remote)
+          // naive breaking selection: top 5 with isBreaking or most shares
+          const topBreaking = remote.filter((a) => a.isBreaking).slice(0, 5)
+          setBreaking(topBreaking.length ? topBreaking : remote.slice(0, 5))
+        } else {
+          setArticles(localArticles)
+          setBreaking(localBreaking)
+        }
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   const styles = StyleSheet.create({
@@ -157,14 +177,36 @@ export default function HomeScreen({ navigation }) {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true)
-    // Simulate loading new data
-    setTimeout(() => {
-      setRefreshing(false)
-    }, 800)
+    ;(async () => {
+      try {
+        const remote = await getTopArticles().catch(() => [])
+        if (remote && remote.length) {
+          setArticles(remote)
+          const topBreaking = remote.filter((a) => a.isBreaking).slice(0, 5)
+          setBreaking(topBreaking.length ? topBreaking : remote.slice(0, 5))
+        } else {
+          setArticles(localArticles)
+          setBreaking(localBreaking)
+        }
+      } finally {
+        setRefreshing(false)
+      }
+    })()
   }, [])
 
-  const handleArticlePress = (article) => {
+  const handleArticlePress = async (article) => {
     markAsRead(article.id)
+    const tryExternal = APP_CONFIG?.content?.openExternalOnTap
+    const url = article?.sourceUrl || article?.url || article?.link
+    if (tryExternal && url) {
+      try {
+        const can = await Linking.canOpenURL(url)
+        if (can) {
+          await Linking.openURL(url)
+          return
+        }
+      } catch {}
+    }
     const sanitizedArticle = sanitizeArticle(article)
     navigation.navigate('ArticleDetail', { article: sanitizedArticle })
   }
@@ -176,17 +218,17 @@ export default function HomeScreen({ navigation }) {
   const getFilteredArticles = () => {
     let base = []
     if (feedTab === 'trending') {
-      base = [...newsArticles].sort((a, b) => b.likes + b.shares - (a.likes + a.shares))
+      base = [...articles].sort((a, b) => b.likes + b.shares - (a.likes + a.shares))
     } else if (feedTab === 'foryou') {
       // For You: prioritize followed topics if any; fallback to top
       if (followedTopics && followedTopics.length) {
         const slugs = new Set(followedTopics.map((t) => t.slug))
-        base = newsArticles.filter((a) => slugs.has(a.category))
+        base = articles.filter((a) => slugs.has(a.category))
       } else {
-        base = newsArticles
+        base = articles
       }
     } else {
-      base = newsArticles
+      base = articles
     }
     if (selectedCategory === 'top') return base
     return base.filter((article) => article.category === selectedCategory)
@@ -217,13 +259,14 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      {isOffline && <OfflineBanner onRetry={() => onRefresh()} />}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity style={styles.menuButton} onPress={() => navigation.openDrawer()}>
             <Ionicons name="menu" size={24} color={theme.text} />
           </TouchableOpacity>
 
-          <Text style={styles.logo}>NewsApp</Text>
+          <Text style={styles.logo}>The Pakistan Tribune</Text>
 
           <TouchableOpacity
             style={styles.searchButton}
@@ -264,63 +307,71 @@ export default function HomeScreen({ navigation }) {
         ))}
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Breaking News Section */}
-        {breakingNews.length > 0 && !loading && (
-          <View style={styles.breakingSection}>
-            <View style={styles.breakingHeader}>
-              <Ionicons name="flash" size={20} color={theme.breaking} />
-              <Text style={styles.breakingTitle}>Breaking News</Text>
-            </View>
-            <FlashList
-              data={breakingNews}
-              renderItem={renderBreakingNewsItem}
-              keyExtractor={(item) => item.id}
-              horizontal
-              estimatedItemSize={width * 0.8}
-              showsHorizontalScrollIndicator={false}
-            />
-          </View>
-        )}
-
-        {/* Main News Section */}
-        <View style={styles.newsSection}>
-          <Text style={styles.sectionTitle}>
-            {feedTab === 'foryou'
-              ? 'For You'
-              : feedTab === 'trending'
-              ? 'Trending'
-              : selectedCategory === 'top'
-              ? 'Top Stories'
-              : categories.find((cat) => cat.slug === selectedCategory)?.name || 'News'}
-          </Text>
-
-          {feedTab === 'foryou' && !loading && getFilteredArticles().length === 0 ? (
-            <Text style={styles.loadingText}>
-              Follow some topics in Sections to personalize your feed.
-            </Text>
-          ) : loading ? (
+      {/* Main content list */}
+      <View style={{ flex: 1 }}>
+        {loading ? (
+          <View style={{ paddingHorizontal: 16 }}>
             <ListSkeleton count={5} />
-          ) : (
-            <FlashList
-              data={getFilteredArticles()}
-              renderItem={({ item }) => (
-                <NewsCard article={item} onPress={() => handleArticlePress(item)} size="large" />
-              )}
-              keyExtractor={(item) => item.id}
-              estimatedItemSize={280}
-            />
-          )}
+          </View>
+        ) : (
+          <FlashList
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16, flexGrow: 1 }}
+            data={getFilteredArticles()}
+            renderItem={({ item }) => (
+              <NewsCard article={item} onPress={() => handleArticlePress(item)} size="large" />
+            )}
+            keyExtractor={(item) => item.id}
+            estimatedItemSize={280}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            ListHeaderComponent={
+              <View>
+                {/* Breaking News Section */}
+                {breaking.length > 0 && (
+                  <View style={styles.breakingSection}>
+                    <View style={styles.breakingHeader}>
+                      <Ionicons name="flash" size={20} color={theme.breaking} />
+                      <Text style={styles.breakingTitle}>Breaking News</Text>
+                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      {breaking.map((item) => (
+                        <View style={styles.breakingCard} key={item.id}>
+                          <NewsCard
+                            article={item}
+                            onPress={() => handleArticlePress(item)}
+                            size="medium"
+                          />
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
 
-          {!loading && getFilteredArticles().length === 0 && (
-            <Text style={styles.loadingText}>No articles found in this category.</Text>
-          )}
-        </View>
-      </ScrollView>
+                {/* Section Title and optional hint */}
+                <View style={{ paddingHorizontal: 0 }}>
+                  <Text style={styles.sectionTitle}>
+                    {feedTab === 'foryou'
+                      ? 'For You'
+                      : feedTab === 'trending'
+                      ? 'Trending'
+                      : selectedCategory === 'top'
+                      ? 'Top Stories'
+                      : categories.find((cat) => cat.slug === selectedCategory)?.name || 'News'}
+                  </Text>
+                  {feedTab === 'foryou' && getFilteredArticles().length === 0 ? (
+                    <Text style={styles.loadingText}>
+                      Follow some topics in Sections to personalize your feed.
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            }
+            ListEmptyComponent={
+              <Text style={styles.loadingText}>No articles found in this category.</Text>
+            }
+          />
+        )}
+      </View>
     </SafeAreaView>
   )
 }

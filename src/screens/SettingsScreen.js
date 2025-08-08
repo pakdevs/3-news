@@ -260,9 +260,16 @@ export default function SettingsScreen({ navigation }) {
       {
         text: 'Clear',
         style: 'destructive',
-        onPress: () => {
-          // Implement cache clearing
-          Alert.alert('Success', 'Cache cleared successfully')
+        onPress: async () => {
+          try {
+            await AsyncStorage.setItem('offlineArticles', JSON.stringify([]))
+            await AsyncStorage.removeItem('offline.lastRefreshed')
+            if (Platform.OS === 'android') {
+              ToastAndroid.show('Cache cleared', ToastAndroid.SHORT)
+            } else {
+              Alert.alert('Success', 'Cache cleared successfully')
+            }
+          } catch {}
         },
       },
     ])
@@ -302,7 +309,10 @@ export default function SettingsScreen({ navigation }) {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            Alert.alert('Coming Soon', 'Account deletion feature coming soon')
+            Alert.alert(
+              'Account Deletion',
+              'To delete your account, please contact support@pakistantribune.example.com.'
+            )
           },
         },
       ]
@@ -712,7 +722,7 @@ export default function SettingsScreen({ navigation }) {
 
         {/* Version Info */}
         <View style={styles.versionInfo}>
-          <Text style={styles.versionText}>NewsApp v1.0.0</Text>
+          <Text style={styles.versionText}>The Pakistan Tribune v1.0.0</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

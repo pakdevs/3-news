@@ -1,4 +1,4 @@
-# NewsApp - React Native News Application
+# The Pakistan Tribune - React Native News Application
 
 A comprehensive mobile news application built with React Native and Expo, featuring a modern UI, offline reading, personalization, and all the features you'd expect from a world-class news app like The New York Times or Wall Street Journal.
 
@@ -62,7 +62,7 @@ Before running this project, make sure you have:
 1. **Clone or extract the project**
 
    ```bash
-   cd 3-news
+   cd the-pakistan-tribune
    ```
 
 2. **Install dependencies**

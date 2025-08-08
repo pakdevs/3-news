@@ -13,7 +13,10 @@ import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
 import NewsCard from '../components/NewsCard'
-import { searchArticles, categories } from '../data/newsData'
+import { Linking } from 'react-native'
+import { APP_CONFIG } from '../utils/config'
+import { searchArticles as localSearch, categories } from '../data/newsData'
+import { searchArticlesApi } from '../utils/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { screenView } from '../utils/analytics'
 
@@ -172,26 +175,48 @@ export default function SearchScreen({ navigation }) {
   }, [])
 
   useEffect(() => {
-    if (searchQuery.trim()) {
+    let active = true
+    const run = async () => {
+      const q = searchQuery.trim()
+      if (!q) {
+        setSearchResults([])
+        setIsSearching(false)
+        return
+      }
       setIsSearching(true)
-      const results = searchArticles(searchQuery)
-
-      // Filter by category if not 'all'
-      const filteredResults =
-        selectedCategory === 'all'
-          ? results
-          : results.filter((article) => article.category === selectedCategory)
-
-      setSearchResults(filteredResults)
-      setIsSearching(false)
-    } else {
-      setSearchResults([])
-      setIsSearching(false)
+      try {
+        const remote = await searchArticlesApi(q, selectedCategory).catch(() => [])
+        if (!active) return
+        if (remote && remote.length) {
+          setSearchResults(remote)
+        } else {
+          const local = localSearch(q)
+          const filtered =
+            selectedCategory === 'all'
+              ? local
+              : local.filter((a) => a.category === selectedCategory)
+          setSearchResults(filtered)
+        }
+      } finally {
+        if (active) setIsSearching(false)
+      }
+    }
+    run()
+    return () => {
+      active = false
     }
   }, [searchQuery, selectedCategory])
 
-  const handleArticlePress = (article) => {
+  const handleArticlePress = async (article) => {
     markAsRead(article.id)
+    const tryExternal = APP_CONFIG?.content?.openExternalOnTap
+    const url = article?.sourceUrl || article?.url || article?.link
+    if (tryExternal && url) {
+      try {
+        const can = await Linking.canOpenURL(url)
+        if (can) return await Linking.openURL(url)
+      } catch {}
+    }
     navigation.navigate('ArticleDetail', { article })
   }
 

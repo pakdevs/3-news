@@ -33,7 +33,7 @@ function DrawerLayout() {
 
   return (
     <View style={{ flex: 1 }}>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
       <Drawer
         drawerContent={(props) => <CustomDrawerContent {...props} />}
         screenOptions={{

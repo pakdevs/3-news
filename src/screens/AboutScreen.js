@@ -201,26 +201,26 @@ export default function AboutScreen({ navigation }) {
     {
       icon: 'globe-outline',
       title: 'Website',
-      url: 'https://newsapp.com',
+      url: 'https://pakistantribune.example.com',
       description: 'Visit our website',
     },
     {
       icon: 'logo-twitter',
       title: 'Twitter',
-      url: 'https://twitter.com/newsapp',
-      description: '@newsapp',
+      url: 'https://twitter.com/PakTribuneApp',
+      description: '@PakTribuneApp',
     },
     {
       icon: 'logo-facebook',
       title: 'Facebook',
-      url: 'https://facebook.com/newsapp',
+      url: 'https://facebook.com/PakTribuneApp',
       description: 'Follow us on Facebook',
     },
     {
       icon: 'logo-instagram',
       title: 'Instagram',
-      url: 'https://instagram.com/newsapp',
-      description: '@newsapp',
+      url: 'https://instagram.com/PakTribuneApp',
+      description: '@PakTribuneApp',
     },
   ]
 
@@ -244,23 +244,23 @@ export default function AboutScreen({ navigation }) {
         {/* Logo Section */}
         <View style={styles.logoSection}>
           <Text style={styles.logo}>📰</Text>
-          <Text style={styles.appName}>NewsApp</Text>
+          <Text style={styles.appName}>The Pakistan Tribune</Text>
           <Text style={styles.version}>Version 1.0.0</Text>
           <Text style={styles.tagline}>Stay informed, stay connected</Text>
         </View>
 
         {/* About Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About NewsApp</Text>
+          <Text style={styles.sectionTitle}>About The Pakistan Tribune</Text>
           <Text style={styles.sectionText}>
-            NewsApp is your comprehensive source for breaking news, in-depth analysis, and
-            personalized content from around the world. We believe that staying informed should be
-            easy, enjoyable, and accessible to everyone.
+            The Pakistan Tribune is your comprehensive source for breaking news, in-depth analysis,
+            and personalized content from around the world. We believe that staying informed should
+            be easy, enjoyable, and accessible to everyone.
           </Text>
           <Text style={styles.sectionText}>
             Our mission is to deliver high-quality journalism while providing a seamless reading
-            experience across all your devices. Whether you're commuting, at home, or on the go,
-            NewsApp keeps you connected to the stories that matter most.
+            experience across all your devices. Whether you're commuting, at home, or on the go, The
+            Pakistan Tribune keeps you connected to the stories that matter most.
           </Text>
         </View>
 
@@ -282,7 +282,6 @@ export default function AboutScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Social Links */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Connect With Us</Text>
           <View style={styles.linkSection}>
@@ -340,8 +339,11 @@ export default function AboutScreen({ navigation }) {
           </Text>
           <Text style={styles.sectionText}>
             Email us at{' '}
-            <Text style={styles.legalLink} onPress={() => handleEmailPress('support@newsapp.com')}>
-              support@newsapp.com
+            <Text
+              style={styles.legalLink}
+              onPress={() => handleEmailPress('support@pakistantribune.example.com')}
+            >
+              support@pakistantribune.example.com
             </Text>{' '}
             or reach out through our social media channels.
           </Text>
@@ -349,18 +351,18 @@ export default function AboutScreen({ navigation }) {
 
         {/* Legal Section */}
         <View style={styles.legalSection}>
-          <Text style={styles.legalText}>© 2025 NewsApp. All rights reserved.</Text>
+          <Text style={styles.legalText}>© 2025 The Pakistan Tribune. All rights reserved.</Text>
           <Text style={styles.legalText}>
             <Text
               style={styles.legalLink}
-              onPress={() => handleLinkPress('https://newsapp.com/privacy')}
+              onPress={() => handleLinkPress('https://pakistantribune.example.com/privacy')}
             >
               Privacy Policy
             </Text>
             {' • '}
             <Text
               style={styles.legalLink}
-              onPress={() => handleLinkPress('https://newsapp.com/terms')}
+              onPress={() => handleLinkPress('https://pakistantribune.example.com/terms')}
             >
               Terms of Service
             </Text>
