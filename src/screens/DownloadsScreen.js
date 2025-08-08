@@ -1,5 +1,14 @@
 import React from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Platform,
+  ToastAndroid,
+  Alert,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
@@ -7,7 +16,7 @@ import NewsCard from '../components/NewsCard'
 
 export default function DownloadsScreen({ navigation }) {
   const { theme } = useTheme()
-  const { offlineArticles } = useApp()
+  const { offlineArticles, clearOffline } = useApp()
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
@@ -33,7 +42,20 @@ export default function DownloadsScreen({ navigation }) {
           <Text style={{ color: theme.primary }}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Downloads</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          onPress={async () => {
+            try {
+              await clearOffline()
+              if (Platform.OS === 'android') {
+                ToastAndroid.show('Cleared offline downloads', ToastAndroid.SHORT)
+              } else {
+                Alert.alert('Downloads', 'Cleared offline downloads')
+              }
+            } catch (e) {}
+          }}
+        >
+          <Text style={{ color: theme.error }}>Clear</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>

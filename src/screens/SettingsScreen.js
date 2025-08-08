@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Switch,
+  Alert,
+  ActivityIndicator,
+  Platform,
+  ToastAndroid,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
@@ -8,11 +19,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   registerBackgroundFetchAsync,
   unregisterBackgroundFetchAsync,
+  runPrefetchNow,
 } from '../utils/background.js'
 
 export default function SettingsScreen({ navigation }) {
   const { theme, isDark, toggleTheme } = useTheme()
-  const { user, dataSaver, toggleDataSaver } = useApp()
+  const { user, dataSaver, toggleDataSaver, offlineArticles } = useApp()
 
   const [notifications, setNotifications] = useState({
     breaking: true,
@@ -25,24 +37,56 @@ export default function SettingsScreen({ navigation }) {
     autoDownload: false,
     dataSync: true,
     analytics: true,
+    wifiOnly: false,
   })
+  const [downloading, setDownloading] = useState(false)
+  const [lastRefreshed, setLastRefreshed] = useState(null)
 
   useEffect(() => {
     // load saved preferences
     ;(async () => {
       try {
         const raw = await AsyncStorage.getItem('settings.preferences')
-        if (raw) setPreferences(JSON.parse(raw))
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          setPreferences((prev) => ({ ...prev, ...parsed }))
+        }
       } catch {}
     })()
   }, [])
 
+  // Persist preferences whenever they change (wifiOnly, analytics, etc.)
   useEffect(() => {
-    // persist preferences and manage background task
     ;(async () => {
       try {
         await AsyncStorage.setItem('settings.preferences', JSON.stringify(preferences))
       } catch {}
+    })()
+  }, [preferences])
+
+  // Load last refreshed on mount and when offline articles change
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const raw = await AsyncStorage.getItem('offline.lastRefreshed')
+        if (raw) setLastRefreshed(raw)
+      } catch {}
+    })()
+  }, [offlineArticles?.length])
+
+  const formatLastRefreshed = () => {
+    if (!lastRefreshed) return 'never'
+    try {
+      const d = new Date(lastRefreshed)
+      return d.toLocaleString()
+    } catch {
+      return 'unknown'
+    }
+  }
+
+  useEffect(() => {
+    // Manage background task on autoDownload changes only
+    ;(async () => {
       if (preferences.autoDownload) {
         await registerBackgroundFetchAsync()
       } else {
@@ -422,7 +466,10 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Reading & Storage</Text>
-            <Text style={styles.sectionDescription}>Manage offline content and data usage</Text>
+            <Text style={styles.sectionDescription}>
+              Manage offline content and data usage — {offlineArticles?.length || 0} saved · Last
+              refreshed {formatLastRefreshed()}
+            </Text>
           </View>
 
           <View style={styles.settingItem}>
@@ -468,6 +515,74 @@ export default function SettingsScreen({ navigation }) {
               />
             </View>
           </View>
+
+          <View style={styles.settingItem}>
+            <Ionicons
+              name="wifi"
+              size={24}
+              color={theme.textSecondary}
+              style={styles.settingIcon}
+            />
+            <View style={styles.settingContent}>
+              <Text style={styles.settingTitle}>Wi‑Fi only</Text>
+              <Text style={styles.settingDescription}>Only prefetch when connected to Wi‑Fi</Text>
+            </View>
+            <View style={styles.switchContainer}>
+              <Switch
+                value={preferences.wifiOnly}
+                onValueChange={(value) => handlePreferenceChange('wifiOnly', value)}
+                trackColor={{ false: theme.border, true: theme.primary }}
+                thumbColor={preferences.wifiOnly ? '#fff' : '#f4f3f4'}
+              />
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.settingItem, styles.lastItem]}
+            onPress={async () => {
+              if (downloading) return
+              setDownloading(true)
+              try {
+                await runPrefetchNow()
+                try {
+                  await AsyncStorage.setItem('offline.lastRefreshed', new Date().toISOString())
+                  setLastRefreshed(new Date().toISOString())
+                } catch {}
+                if (Platform.OS === 'android') {
+                  ToastAndroid.show('Offline content refreshed', ToastAndroid.SHORT)
+                } else {
+                  Alert.alert('Downloads', 'Content refreshed for offline use')
+                }
+              } catch (e) {
+                if (Platform.OS === 'android') {
+                  ToastAndroid.show('Refresh failed', ToastAndroid.SHORT)
+                } else {
+                  Alert.alert('Downloads', 'Refresh failed, please try again later')
+                }
+              } finally {
+                setDownloading(false)
+              }
+            }}
+            disabled={downloading}
+          >
+            <Ionicons
+              name="cloud-download"
+              size={24}
+              color={theme.textSecondary}
+              style={styles.settingIcon}
+            />
+            <View style={styles.settingContent}>
+              <Text style={styles.settingTitle}>Download now</Text>
+              <Text style={styles.settingDescription}>
+                Prefetch top and followed articles immediately
+              </Text>
+            </View>
+            {downloading ? (
+              <ActivityIndicator size="small" color={theme.primary} />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+            )}
+          </TouchableOpacity>
 
           <TouchableOpacity style={styles.settingItem} onPress={handleClearCache}>
             <Ionicons

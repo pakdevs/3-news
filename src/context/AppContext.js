@@ -242,6 +242,15 @@ export const AppProvider = ({ children }) => {
     saveData('offlineArticles', newOfflineArticles)
   }
 
+  const clearOffline = async () => {
+    try {
+      setOfflineArticles([])
+      await AsyncStorage.setItem('offlineArticles', JSON.stringify([]))
+    } catch (e) {
+      console.error('Error clearing offline articles:', e)
+    }
+  }
+
   const login = (userData) => {
     setUser(userData)
     saveData('user', userData)
@@ -292,6 +301,7 @@ export const AppProvider = ({ children }) => {
     offlineArticles,
     saveForOffline,
     removeFromOffline,
+    clearOffline,
 
     // Network/Data
     dataSaver,

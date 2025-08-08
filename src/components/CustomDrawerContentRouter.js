@@ -9,7 +9,7 @@ import { DrawerContentScrollView } from '@react-navigation/drawer'
 
 export default function CustomDrawerContent(props) {
   const { theme, toggleTheme, isDark } = useTheme()
-  const { user, logout } = useApp()
+  const { user, logout, offlineArticles } = useApp()
   const router = useRouter()
 
   const styles = StyleSheet.create({
@@ -74,6 +74,17 @@ export default function CustomDrawerContent(props) {
       fontSize: 16,
       color: theme.text,
     },
+    badge: {
+      marginLeft: 'auto',
+      backgroundColor: theme.primary,
+      borderRadius: 10,
+      minWidth: 20,
+      height: 20,
+      paddingHorizontal: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    badgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
     themeToggle: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -145,6 +156,13 @@ export default function CustomDrawerContent(props) {
         <TouchableOpacity style={styles.categoryItem} onPress={() => router.push('/downloads')}>
           <Ionicons name="download-outline" size={24} color={theme.textSecondary} />
           <Text style={styles.categoryText}>Downloads</Text>
+          {!!(offlineArticles && offlineArticles.length) && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {offlineArticles.length > 99 ? '99+' : String(offlineArticles.length)}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
 
         {/* Categories Section */}
