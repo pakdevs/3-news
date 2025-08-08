@@ -14,6 +14,8 @@ import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
 import NewsCard from '../components/NewsCard'
 import { searchArticles, categories } from '../data/newsData'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { screenView } from '../utils/analytics'
 
 export default function SearchScreen({ navigation }) {
   const { theme } = useTheme()
@@ -21,12 +23,7 @@ export default function SearchScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)
-  const [recentSearches, setRecentSearches] = useState([
-    'AI technology',
-    'climate change',
-    'space exploration',
-    'healthcare',
-  ])
+  const [recentSearches, setRecentSearches] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('all')
 
   const styles = StyleSheet.create({
@@ -164,6 +161,17 @@ export default function SearchScreen({ navigation }) {
   })
 
   useEffect(() => {
+    // one-time screen view and load recent searches
+    screenView('Search')
+    ;(async () => {
+      try {
+        const raw = await AsyncStorage.getItem('search.recent')
+        if (raw) setRecentSearches(JSON.parse(raw))
+      } catch {}
+    })()
+  }, [])
+
+  useEffect(() => {
     if (searchQuery.trim()) {
       setIsSearching(true)
       const results = searchArticles(searchQuery)
@@ -195,6 +203,23 @@ export default function SearchScreen({ navigation }) {
     setSearchQuery('')
     setSearchResults([])
   }
+
+  useEffect(() => {
+    // save recent searches when query finalizes (simple heuristic)
+    const t = setTimeout(async () => {
+      const q = searchQuery.trim()
+      if (!q) return
+      try {
+        const next = [
+          q,
+          ...recentSearches.filter((s) => s.toLowerCase() !== q.toLowerCase()),
+        ].slice(0, 8)
+        setRecentSearches(next)
+        await AsyncStorage.setItem('search.recent', JSON.stringify(next))
+      } catch {}
+    }, 600)
+    return () => clearTimeout(t)
+  }, [searchQuery])
 
   const filterCategories = [{ id: 'all', name: 'All', slug: 'all' }, ...categories]
 

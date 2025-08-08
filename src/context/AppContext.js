@@ -28,6 +28,7 @@ export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [isOffline, setIsOffline] = useState(false)
   const [offlineArticles, setOfflineArticles] = useState([])
+  const [dataSaver, setDataSaver] = useState(false)
 
   useEffect(() => {
     loadAppData()
@@ -51,6 +52,7 @@ export const AppProvider = ({ children }) => {
         AsyncStorage.getItem('readArticles'),
         AsyncStorage.getItem('user'),
         AsyncStorage.getItem('offlineArticles'),
+        AsyncStorage.getItem('dataSaver'),
       ])
 
       // Process bookmarks: ensure IDs are strings
@@ -94,6 +96,15 @@ export const AppProvider = ({ children }) => {
         }))
         setOfflineArticles(offlineWithStringIds)
       }
+
+      if (savedUser) setUser(JSON.parse(savedUser))
+
+      // Data saver
+      if (arguments[0]) {
+        // no-op to keep arg index stable
+      }
+      const dataSaverRaw = await AsyncStorage.getItem('dataSaver')
+      if (dataSaverRaw !== null) setDataSaver(dataSaverRaw === 'true')
     } catch (error) {
       console.error('Error loading app data:', error)
     }
@@ -241,6 +252,12 @@ export const AppProvider = ({ children }) => {
     AsyncStorage.removeItem('user')
   }
 
+  const toggleDataSaver = async () => {
+    const next = !dataSaver
+    setDataSaver(next)
+    await AsyncStorage.setItem('dataSaver', next ? 'true' : 'false')
+  }
+
   const value = {
     // Bookmarks
     bookmarks,
@@ -275,6 +292,10 @@ export const AppProvider = ({ children }) => {
     offlineArticles,
     saveForOffline,
     removeFromOffline,
+
+    // Network/Data
+    dataSaver,
+    toggleDataSaver,
 
     // User
     user,

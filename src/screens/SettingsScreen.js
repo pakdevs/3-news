@@ -1,13 +1,18 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import {
+  registerBackgroundFetchAsync,
+  unregisterBackgroundFetchAsync,
+} from '../utils/background.js'
 
 export default function SettingsScreen({ navigation }) {
   const { theme, isDark, toggleTheme } = useTheme()
-  const { user } = useApp()
+  const { user, dataSaver, toggleDataSaver } = useApp()
 
   const [notifications, setNotifications] = useState({
     breaking: true,
@@ -21,6 +26,30 @@ export default function SettingsScreen({ navigation }) {
     dataSync: true,
     analytics: true,
   })
+
+  useEffect(() => {
+    // load saved preferences
+    ;(async () => {
+      try {
+        const raw = await AsyncStorage.getItem('settings.preferences')
+        if (raw) setPreferences(JSON.parse(raw))
+      } catch {}
+    })()
+  }, [])
+
+  useEffect(() => {
+    // persist preferences and manage background task
+    ;(async () => {
+      try {
+        await AsyncStorage.setItem('settings.preferences', JSON.stringify(preferences))
+      } catch {}
+      if (preferences.autoDownload) {
+        await registerBackgroundFetchAsync()
+      } else {
+        await unregisterBackgroundFetchAsync()
+      }
+    })()
+  }, [preferences.autoDownload])
 
   const styles = StyleSheet.create({
     container: {
@@ -394,6 +423,27 @@ export default function SettingsScreen({ navigation }) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Reading & Storage</Text>
             <Text style={styles.sectionDescription}>Manage offline content and data usage</Text>
+          </View>
+
+          <View style={styles.settingItem}>
+            <Ionicons
+              name="cellular"
+              size={24}
+              color={theme.textSecondary}
+              style={styles.settingIcon}
+            />
+            <View style={styles.settingContent}>
+              <Text style={styles.settingTitle}>Data Saver</Text>
+              <Text style={styles.settingDescription}>Reduce image quality to save data</Text>
+            </View>
+            <View style={styles.switchContainer}>
+              <Switch
+                value={dataSaver}
+                onValueChange={toggleDataSaver}
+                trackColor={{ false: theme.border, true: theme.primary }}
+                thumbColor={dataSaver ? '#fff' : '#f4f3f4'}
+              />
+            </View>
           </View>
 
           <View style={styles.settingItem}>

@@ -1,5 +1,6 @@
 import React from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native'
+import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
@@ -8,7 +9,7 @@ const { width } = Dimensions.get('window')
 
 export default function NewsCard({ article, onPress, size = 'large' }) {
   const { theme } = useTheme()
-  const { isBookmarked, addBookmark, removeBookmark, isRead } = useApp()
+  const { isBookmarked, addBookmark, removeBookmark, isRead, dataSaver } = useApp()
 
   // Defensive: sanitize all article properties to primitives
   const safeArticle = {
@@ -65,7 +66,6 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
     image: {
       width: '100%',
       height: size === 'large' ? 200 : size === 'medium' ? 150 : 120,
-      resizeMode: 'cover',
     },
     breakingBadge: {
       position: 'absolute',
@@ -216,7 +216,13 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
     <View style={styles.container}>
       <TouchableOpacity style={styles.pressable} onPress={onPress}>
         <View style={styles.imageContainer}>
-          <Image source={{ uri: safeArticle.imageUrl }} style={styles.image} />
+          <Image
+            source={{ uri: safeArticle.imageUrl }}
+            style={styles.image}
+            contentFit={dataSaver ? 'contain' : 'cover'}
+            transition={100}
+            cachePolicy={dataSaver ? 'memory' : 'memory-disk'}
+          />
 
           {safeArticle.isBreaking && (
             <View style={styles.breakingBadge}>

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { View, ActivityIndicator } from 'react-native'
+import ErrorBoundary from '../src/components/ErrorBoundary'
 
 function DrawerLayout() {
   const themeContext = useTheme()
@@ -54,6 +55,15 @@ function DrawerLayout() {
           }}
         />
         <Drawer.Screen
+          name="downloads"
+          options={{
+            drawerLabel: 'Downloads',
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="download-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
           name="settings"
           options={{
             drawerLabel: 'Settings',
@@ -82,7 +92,9 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <ThemeProvider>
           <AppProvider>
-            <DrawerLayout />
+            <ErrorBoundary>
+              <DrawerLayout />
+            </ErrorBoundary>
           </AppProvider>
         </ThemeProvider>
       </GestureHandlerRootView>

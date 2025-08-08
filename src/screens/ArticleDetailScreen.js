@@ -5,15 +5,16 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   Share,
   Dimensions,
   Alert,
 } from 'react-native'
+import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
+import { screenView } from '../utils/analytics'
 
 const { width } = Dimensions.get('window')
 
@@ -71,6 +72,7 @@ export default function ArticleDetailScreen({ navigation, route }) {
   useEffect(() => {
     // Mark article as read when component mounts
     markAsRead(article.id)
+    screenView('ArticleDetail')
   }, [article.id])
 
   const styles = StyleSheet.create({
@@ -106,7 +108,6 @@ export default function ArticleDetailScreen({ navigation, route }) {
     heroImage: {
       width: '100%',
       height: 250,
-      resizeMode: 'cover',
     },
     articleHeader: {
       padding: 20,
@@ -393,7 +394,13 @@ export default function ArticleDetailScreen({ navigation, route }) {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Image source={{ uri: article.imageUrl }} style={styles.heroImage} />
+        <Image
+          source={{ uri: article.imageUrl }}
+          style={styles.heroImage}
+          contentFit={useApp().dataSaver ? 'contain' : 'cover'}
+          transition={150}
+          cachePolicy={useApp().dataSaver ? 'memory' : 'memory-disk'}
+        />
 
         <View style={styles.articleHeader}>
           {article.isBreaking && (

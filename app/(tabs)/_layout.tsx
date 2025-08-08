@@ -36,6 +36,8 @@ export default function TabLayout() {
             iconName = focused ? 'home' : 'home-outline'
           } else if (route.name === 'sections') {
             iconName = focused ? 'grid' : 'grid-outline'
+          } else if (route.name === 'following') {
+            iconName = focused ? 'heart' : 'heart-outline'
           } else if (route.name === 'bookmarks') {
             iconName = focused ? 'bookmark' : 'bookmark-outline'
           } else if (route.name === 'profile') {
@@ -57,6 +59,12 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
+        }}
+      />
+      <Tabs.Screen
+        name="following"
+        options={{
+          title: 'For You',
         }}
       />
       <Tabs.Screen

@@ -142,6 +142,11 @@ export default function CustomDrawerContent(props) {
           <Text style={styles.categoryText}>Search</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.categoryItem} onPress={() => router.push('/downloads')}>
+          <Ionicons name="download-outline" size={24} color={theme.textSecondary} />
+          <Text style={styles.categoryText}>Downloads</Text>
+        </TouchableOpacity>
+
         {/* Categories Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Categories</Text>
