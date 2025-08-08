@@ -1,10 +1,11 @@
 import React from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
 import { categories } from '../data/newsData'
 import { useRouter } from 'expo-router'
+import { DrawerContentScrollView } from '@react-navigation/drawer'
 
 export default function CustomDrawerContent(props) {
   const { theme, toggleTheme, isDark } = useTheme()
@@ -129,7 +130,7 @@ export default function CustomDrawerContent(props) {
         )}
       </View>
 
-      <ScrollView {...props} showsVerticalScrollIndicator={false}>
+      <DrawerContentScrollView {...props} showsVerticalScrollIndicator={false}>
         {/* Main Navigation */}
         <TouchableOpacity style={styles.categoryItem} onPress={() => router.push('/(tabs)')}>
           <Ionicons name="home-outline" size={24} color={theme.textSecondary} />
@@ -188,7 +189,7 @@ export default function CustomDrawerContent(props) {
             </TouchableOpacity>
           )}
         </View>
-      </ScrollView>
+      </DrawerContentScrollView>
     </View>
   )
 }

@@ -39,9 +39,9 @@ A comprehensive mobile news application built with React Native and Expo, featur
 - **Reading Time Estimates**
 - **Article Engagement** (likes, shares, comments)
 
-### 🛠️ Technical Features
+## 🛠️ Technical Features
 
-- **React Navigation** for seamless navigation
+- **Expo Router** for file-based navigation
 - **Context API** for state management
 - **AsyncStorage** for local data persistence
 - **Expo Notifications** for push notifications
@@ -211,9 +211,12 @@ The app includes comprehensive dummy data:
 
 ### Adding New Features
 
+This project uses Expo Router (file-based routing) under the `app/` directory:
+
 1. Create components in `src/components/`
 2. Add screens to `src/screens/`
-3. Update navigation in `src/navigation/AppNavigator.js`
+3. Add routes in `app/` (for example, `app/new-screen.tsx` or nested routes like `app/article/[id].tsx`)
+4. Tabs are defined in `app/(tabs)/_layout.tsx`; the drawer is defined in `app/_layout.tsx`
 
 ## 🚀 Deployment
 

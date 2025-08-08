@@ -6,9 +6,10 @@ import { useTheme } from '../../src/context/ThemeContext'
 import { View, ActivityIndicator } from 'react-native'
 
 export default function TabLayout() {
-  const { theme, isLoading } = useTheme()
+  const themeContext = useTheme()
 
-  if (isLoading) {
+  // Handle case where theme context is not yet available
+  if (!themeContext || themeContext.isLoading) {
     return (
       <View
         style={{
@@ -22,6 +23,8 @@ export default function TabLayout() {
       </View>
     )
   }
+
+  const { theme } = themeContext
 
   return (
     <Tabs

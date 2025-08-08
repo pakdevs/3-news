@@ -7,7 +7,8 @@ export default function CategoryPage() {
   const router = useRouter()
 
   // Find the category by slug
-  const category = categories.find((c) => c.slug === slug)
+  const slugValue = Array.isArray(slug) ? slug[0] : slug
+  const category = categories.find((c) => c.slug === slugValue)
 
   const navigation = {
     navigate: (route: string, params?: any) => {
@@ -23,7 +24,7 @@ export default function CategoryPage() {
 
   const route = {
     params: {
-      categorySlug: slug,
+      categorySlug: slugValue,
       categoryName: category?.name || 'Category',
     },
   }

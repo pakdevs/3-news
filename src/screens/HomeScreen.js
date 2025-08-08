@@ -15,6 +15,7 @@ import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
 import NewsCard from '../components/NewsCard'
 import { newsArticles, breakingNews, categories } from '../data/newsData'
+import sanitizeArticle from '../utils/sanitizeArticle'
 
 const { width } = Dimensions.get('window')
 
@@ -125,7 +126,8 @@ export default function HomeScreen({ navigation }) {
 
   const handleArticlePress = (article) => {
     markAsRead(article.id)
-    navigation.navigate('ArticleDetail', { article })
+    const sanitizedArticle = sanitizeArticle(article)
+    navigation.navigate('ArticleDetail', { article: sanitizedArticle })
   }
 
   const handleCategoryChange = (categorySlug) => {

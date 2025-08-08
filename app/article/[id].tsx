@@ -7,7 +7,8 @@ export default function ArticlePage() {
   const router = useRouter()
 
   // Find the article by ID
-  const article = newsArticles.find((a) => a.id === id)
+  const articleId = Array.isArray(id) ? id[0] : id
+  const article = newsArticles.find((a) => a.id === articleId)
 
   const navigation = {
     navigate: (route: string, params?: any) => {
