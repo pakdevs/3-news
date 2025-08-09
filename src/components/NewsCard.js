@@ -44,9 +44,9 @@ function NewsCard({ article, onPress, size = 'large', showSummary = true }) {
   // Validate source icon URL
   const validSourceIcon =
     safeArticle.sourceIcon && isValidUrl(safeArticle.sourceIcon) ? safeArticle.sourceIcon : ''
+  // Abbreviation retained only for fallback where display name absent
   const sourceAbbrev = useMemo(
-    () =>
-      (safeArticle.displaySourceName || safeArticle.sourceName || 'SRC').slice(0, 3).toUpperCase(),
+    () => (safeArticle.displaySourceName || safeArticle.sourceName || 'SRC').slice(0, 3),
     [safeArticle.displaySourceName, safeArticle.sourceName]
   )
 
@@ -257,19 +257,7 @@ function NewsCard({ article, onPress, size = 'large', showSummary = true }) {
     }
   }
 
-  const formatNumber = (num) => {
-    if (num === null || num === undefined || isNaN(num)) return '0'
-    try {
-      const numValue = Number(num)
-      if (!isFinite(numValue)) return '0'
-      if (numValue >= 1000) {
-        return (numValue / 1000).toFixed(1) + 'k'
-      }
-      return String(numValue)
-    } catch (_error) {
-      return '0'
-    }
-  }
+  // formatNumber removed (engagement metrics not displayed)
 
   return (
     <View style={styles.container}>
