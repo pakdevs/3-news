@@ -4,13 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
-import { categories, getArticlesByCategory } from '../data/newsData'
+import { CATEGORIES } from '../utils/config'
+import { getTopArticles } from '../utils/api'
 
 const { width } = Dimensions.get('window')
 
 export default function SectionsScreen({ navigation }) {
   const { theme } = useTheme()
   const { isFollowingTopic, followTopic, unfollowTopic } = useApp()
+  const [counts, setCounts] = React.useState({})
+  const [loading, setLoading] = React.useState(true)
 
   const styles = StyleSheet.create({
     container: {
@@ -182,17 +185,47 @@ export default function SectionsScreen({ navigation }) {
     if (isFollowingTopic(category.slug)) {
       unfollowTopic(category.slug)
     } else {
-      followTopic(category)
+      followTopic({ slug: category.slug, name: category.name })
     }
   }
 
-  const trendingTopics = [
-    { title: 'Artificial Intelligence', count: '2.5k articles' },
-    { title: 'Climate Change', count: '1.8k articles' },
-    { title: 'Space Exploration', count: '1.2k articles' },
-    { title: 'Cryptocurrency', count: '956 articles' },
-    { title: 'Healthcare', count: '834 articles' },
-  ]
+  React.useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const items = await getTopArticles().catch(() => [])
+        if (!active) return
+        if (Array.isArray(items)) {
+          const map = {}
+          for (const it of items) {
+            const slug = String(it?.category || '')
+              .toLowerCase()
+              .trim()
+            if (!slug) continue
+            map[slug] = (map[slug] || 0) + 1
+          }
+          setCounts(map)
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // Derive trending categories dynamically from counts
+  const trendingCategories = React.useMemo(() => {
+    const entries = Object.entries(counts)
+      .filter(([slug]) => slug !== 'top')
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+    return entries.map(([slug, count]) => ({
+      title: CATEGORIES[slug]?.name || slug,
+      count: `${count} article${count !== 1 ? 's' : ''}`,
+    }))
+  }, [counts])
 
   return (
     <SafeAreaView style={styles.container}>
@@ -217,22 +250,24 @@ export default function SectionsScreen({ navigation }) {
         <Text style={styles.sectionTitle}>Browse by Category</Text>
 
         <View style={styles.grid}>
-          {categories.map((category) => {
-            const articleCount = getArticlesByCategory(category.slug).length
-            const isFollowing = isFollowingTopic(category.slug)
-            const categoryColor = getCategoryColor(category.slug)
+          {Object.entries(CATEGORIES).map(([slug, meta]) => {
+            const articleCount =
+              slug === 'top' ? Object.values(counts).reduce((a, b) => a + b, 0) : counts[slug] || 0
+            const isFollowing = isFollowingTopic(slug)
+            const categoryColor = getCategoryColor(slug)
+            const category = { slug, name: meta.name }
 
             return (
               <TouchableOpacity
-                key={category.id}
+                key={slug}
                 style={styles.categoryCard}
                 onPress={() => handleCategoryPress(category)}
               >
                 <View style={styles.categoryIcon}>
-                  <Ionicons name={getCategoryIcon(category.slug)} size={32} color={categoryColor} />
+                  <Ionicons name={getCategoryIcon(slug)} size={32} color={categoryColor} />
                 </View>
 
-                <Text style={styles.categoryName}>{category.name}</Text>
+                <Text style={styles.categoryName}>{meta.name}</Text>
                 <Text style={styles.categoryCount}>
                   {articleCount} article{articleCount !== 1 ? 's' : ''}
                 </Text>
@@ -266,23 +301,25 @@ export default function SectionsScreen({ navigation }) {
           })}
         </View>
 
-        <View style={styles.trendsSection}>
-          <Text style={styles.sectionTitle}>Trending Topics</Text>
-          {trendingTopics.map((trend, index) => (
-            <TouchableOpacity key={index} style={styles.trendItem}>
-              <View style={styles.trendInfo}>
-                <Text style={styles.trendTitle}>{trend.title}</Text>
-                <Text style={styles.trendCount}>{trend.count}</Text>
-              </View>
-              <Ionicons
-                name="trending-up"
-                size={20}
-                color={theme.primary}
-                style={styles.trendIcon}
-              />
-            </TouchableOpacity>
-          ))}
-        </View>
+        {trendingCategories.length > 0 && (
+          <View style={styles.trendsSection}>
+            <Text style={styles.sectionTitle}>Trending Categories</Text>
+            {trendingCategories.map((trend, index) => (
+              <TouchableOpacity key={index} style={styles.trendItem}>
+                <View style={styles.trendInfo}>
+                  <Text style={styles.trendTitle}>{trend.title}</Text>
+                  <Text style={styles.trendCount}>{trend.count}</Text>
+                </View>
+                <Ionicons
+                  name="trending-up"
+                  size={20}
+                  color={theme.primary}
+                  style={styles.trendIcon}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   )

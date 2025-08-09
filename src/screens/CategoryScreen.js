@@ -6,32 +6,52 @@ import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
 import NewsCard from '../components/NewsCard'
 import { Linking } from 'react-native'
-import { APP_CONFIG } from '../utils/config'
-import { getCategoryArticles as getLocalByCategory, categories } from '../data/newsData'
-import { getCategoryArticles } from '../utils/api'
+import { APP_CONFIG, CATEGORIES } from '../utils/config'
+import { getRegionCategory, getRegionTop } from '../utils/api'
 
 export default function CategoryScreen({ navigation, route }) {
   const { categorySlug, categoryName } = route.params
   const { theme } = useTheme()
-  const { markAsRead, isFollowingTopic, followTopic, unfollowTopic } = useApp()
+  const { markAsRead, isFollowingTopic, followTopic, unfollowTopic, region } = useApp()
   const [refreshing, setRefreshing] = useState(false)
-  const [articles, setArticles] = useState(getLocalByCategory(categorySlug))
+  const [articles, setArticles] = useState([])
   const [sortBy, setSortBy] = useState('newest')
 
-  const category = categories.find((cat) => cat.slug === categorySlug)
+  const categoryMeta = CATEGORIES[categorySlug]
   React.useEffect(() => {
     let active = true
     ;(async () => {
       try {
-        const remote = await getCategoryArticles(categorySlug).catch(() => [])
+        // 1) Try region category endpoint
+        const remote = await getRegionCategory(region, categorySlug).catch(() => [])
         if (!active) return
-        if (remote && remote.length) setArticles(remote)
-      } catch {}
+        if (Array.isArray(remote) && remote.length) {
+          setArticles(remote)
+          return
+        }
+
+        // 2) Fallback: filter Top stories by category
+        const top = await getRegionTop(region).catch(() => [])
+        if (!active) return
+        if (Array.isArray(top) && top.length) {
+          const filtered = top.filter(
+            (a) => String(a?.category || '').toLowerCase() === String(categorySlug).toLowerCase()
+          )
+          // Prefer filtered, otherwise show the remote Top Stories list instead of local dummy
+          setArticles(filtered.length ? filtered : top)
+          return
+        }
+
+        // 3) Final fallback: empty (no local dummy)
+        setArticles([])
+      } catch {
+        if (active) setArticles([])
+      }
     })()
     return () => {
       active = false
     }
-  }, [categorySlug])
+  }, [categorySlug, region])
 
   const styles = StyleSheet.create({
     container: {
@@ -172,13 +192,25 @@ export default function CategoryScreen({ navigation, route }) {
     setRefreshing(true)
     ;(async () => {
       try {
-        const remote = await getCategoryArticles(categorySlug).catch(() => [])
-        if (remote && remote.length) setArticles(remote)
+        const remote = await getRegionCategory(region, categorySlug).catch(() => [])
+        if (Array.isArray(remote) && remote.length) {
+          setArticles(remote)
+        } else {
+          const top = await getRegionTop(region).catch(() => [])
+          const filtered = Array.isArray(top)
+            ? top.filter(
+                (a) =>
+                  String(a?.category || '').toLowerCase() === String(categorySlug).toLowerCase()
+              )
+            : []
+          // Prefer filtered, else show remote Top Stories; only if top empty, use local
+          setArticles(filtered.length ? filtered : Array.isArray(top) && top.length ? top : [])
+        }
       } finally {
         setRefreshing(false)
       }
     })()
-  }, [categorySlug])
+  }, [categorySlug, region])
 
   const handleArticlePress = async (article) => {
     markAsRead(article.id)
@@ -194,12 +226,12 @@ export default function CategoryScreen({ navigation, route }) {
   }
 
   const handleFollowToggle = () => {
-    if (category) {
-      if (isFollowingTopic(category.slug)) {
-        unfollowTopic(category.slug)
-      } else {
-        followTopic(category)
-      }
+    const slug = categorySlug
+    if (!slug) return
+    if (isFollowingTopic(slug)) {
+      unfollowTopic(slug)
+    } else {
+      followTopic({ slug, name: categoryMeta?.name || categoryName })
     }
   }
 
@@ -246,7 +278,7 @@ export default function CategoryScreen({ navigation, route }) {
   }
 
   const sortedArticles = getSortedArticles()
-  const isFollowing = category && isFollowingTopic(category.slug)
+  const isFollowing = isFollowingTopic(categorySlug)
 
   return (
     <SafeAreaView style={styles.container}>
@@ -278,7 +310,7 @@ export default function CategoryScreen({ navigation, route }) {
             </Text>
           </View>
 
-          {category && (
+          {categoryMeta && (
             <TouchableOpacity
               style={[
                 styles.followButton,

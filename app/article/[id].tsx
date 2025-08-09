@@ -3,12 +3,22 @@ import ArticleDetailScreen from '../../src/screens/ArticleDetailScreen'
 import { newsArticles } from '../../src/data/newsData'
 
 export default function ArticlePage() {
-  const { id } = useLocalSearchParams()
+  const { id, article: articleParam } = useLocalSearchParams()
   const router = useRouter()
 
   // Find the article by ID
   const articleId = Array.isArray(id) ? id[0] : id
-  const article = newsArticles.find((a) => a.id === articleId)
+  let article = undefined as any
+  // Prefer payload if provided (from remote list)
+  if (articleParam && typeof articleParam === 'string') {
+    try {
+      const decoded = decodeURIComponent(articleParam)
+      article = JSON.parse(decoded)
+    } catch {}
+  }
+  if (!article) {
+    article = newsArticles.find((a) => a.id === articleId)
+  }
 
   const navigation = {
     navigate: (route: string, params?: any) => {
@@ -18,9 +28,7 @@ export default function ArticlePage() {
     push: (route: string) => router.push(route),
   }
 
-  const route = {
-    params: { article },
-  }
+  const route = { params: { article } }
 
   if (!article) {
     // Article not found, redirect to home

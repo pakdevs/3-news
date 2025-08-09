@@ -1,37 +1,54 @@
-import React from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native'
+import React, { useState, useCallback, useMemo } from 'react'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
+import { CATEGORIES } from '../utils/config'
+import { isValidUrl } from '../utils/helpers'
 
-const { width } = Dimensions.get('window')
+// width not used
 
-export default function NewsCard({ article, onPress, size = 'large' }) {
+// showSummary: opt-in flag (default true). For HomeScreen we will pass false for headline-only.
+function NewsCard({ article, onPress, size = 'large', showSummary = true }) {
   const { theme } = useTheme()
   const { isBookmarked, addBookmark, removeBookmark, isRead, dataSaver } = useApp()
+  const [imageFailed, setImageFailed] = useState(false)
 
   // Defensive: sanitize all article properties to primitives
   const safeArticle = {
     id: article && article.id !== undefined && article.id !== null ? String(article.id) : '',
     imageUrl: article && article.imageUrl ? String(article.imageUrl) : '',
+    hasImage: !!(article && article.hasImage),
     isBreaking: !!(article && article.isBreaking),
     category: article && article.category ? String(article.category) : 'General',
     title: article && article.title ? String(article.title) : 'No title available',
     summary: article && article.summary ? String(article.summary) : 'No summary available',
     author: article && article.author ? String(article.author) : 'Unknown author',
+    sourceName: article && article.sourceName ? String(article.sourceName) : '',
+    sourceIcon: article && article.sourceIcon ? String(article.sourceIcon) : '',
+    displaySourceName:
+      article && article.displaySourceName
+        ? String(article.displaySourceName)
+        : article && article.sourceName
+        ? String(article.sourceName)
+        : '',
     publishDate: article && article.publishDate ? String(article.publishDate) : '',
     readTime: article && article.readTime ? String(article.readTime) : '1 min read',
-    likes:
-      article && article.likes !== undefined && article.likes !== null && !isNaN(article.likes)
-        ? Number(article.likes)
-        : 0,
-    shares:
-      article && article.shares !== undefined && article.shares !== null && !isNaN(article.shares)
-        ? Number(article.shares)
-        : 0,
+    // likes & shares removed from UI; retain (if needed later) but not used
+    likes: 0,
+    shares: 0,
   }
   const articleId = safeArticle.id
+
+  // Validate source icon URL
+  const validSourceIcon =
+    safeArticle.sourceIcon && isValidUrl(safeArticle.sourceIcon) ? safeArticle.sourceIcon : ''
+  const sourceAbbrev = useMemo(
+    () =>
+      (safeArticle.displaySourceName || safeArticle.sourceName || 'SRC').slice(0, 3).toUpperCase(),
+    [safeArticle.displaySourceName, safeArticle.sourceName]
+  )
 
   // Early return if no article data
   if (!article || typeof article !== 'object') {
@@ -46,15 +63,12 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
     container: {
       backgroundColor: theme.card,
       borderRadius: 12,
-      marginBottom: 16,
+      marginBottom: 14,
       shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.1,
-      shadowRadius: 3.84,
-      elevation: 5,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.07,
+      shadowRadius: 2,
+      elevation: 2,
     },
     pressable: {
       borderRadius: 12,
@@ -66,6 +80,23 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
     image: {
       width: '100%',
       height: size === 'large' ? 200 : size === 'medium' ? 150 : 120,
+    },
+    imagePlaceholder: {
+      width: '100%',
+      height: size === 'large' ? 200 : size === 'medium' ? 150 : 120,
+      backgroundColor: theme.surfaceAlt || '#222',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    placeholderText: {
+      color: theme.textSecondary,
+      fontSize: 16,
+      fontWeight: '600',
+      letterSpacing: 0.5,
+      opacity: 0.55,
+      textAlign: 'center',
+      paddingHorizontal: 12,
+      lineHeight: 20,
     },
     breakingBadge: {
       position: 'absolute',
@@ -100,7 +131,21 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
       fontWeight: 'bold',
       color: theme.primary,
       textTransform: 'uppercase',
+      // spacing handled by headerRow
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       marginBottom: 8,
+    },
+    dotSeparator: {
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.textSecondary,
+      opacity: 0.4,
+      marginHorizontal: 8,
+      marginTop: 1,
     },
     title: {
       fontSize: size === 'large' ? 18 : size === 'medium' ? 16 : 14,
@@ -117,6 +162,31 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
       color: theme.textSecondary,
       lineHeight: 20,
       marginBottom: 12,
+    },
+    sourceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    sourceLogo: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      marginRight: 6,
+      backgroundColor: theme.surfaceAlt || theme.surface,
+    },
+    sourceBadge: {
+      backgroundColor: theme.surfaceAlt || theme.surface,
+      paddingHorizontal: 6,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    sourceText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
     },
     footer: {
       flexDirection: 'row',
@@ -136,21 +206,7 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
       fontSize: 12,
       color: theme.textSecondary,
     },
-    engagement: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 8,
-    },
-    engagementItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginRight: 16,
-    },
-    engagementText: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      marginLeft: 4,
-    },
+    // engagement styles removed
     readIndicator: {
       width: 8,
       height: 8,
@@ -170,7 +226,15 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
     }
   }
 
-  const formatDate = (dateString) => {
+  const metaLine = useMemo(() => {
+    const datePart = formatDate(safeArticle.publishDate)
+    const rt = safeArticle.readTime
+    return `${datePart} • ${rt}`
+  }, [safeArticle.publishDate, safeArticle.readTime])
+
+  const onImageError = useCallback(() => setImageFailed(true), [])
+
+  function formatDate(dateString) {
     if (!dateString) return 'Unknown date'
     try {
       const date = new Date(String(dateString))
@@ -209,15 +273,32 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.pressable} onPress={onPress}>
+      <TouchableOpacity
+        style={styles.pressable}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${safeArticle.title}. ${
+          CATEGORIES[safeArticle.category]?.name || safeArticle.category
+        } category. ${safeArticle.displaySourceName || ''}. ${metaLine}`}
+        activeOpacity={0.85}
+      >
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: safeArticle.imageUrl }}
-            style={styles.image}
-            contentFit={dataSaver ? 'contain' : 'cover'}
-            transition={100}
-            cachePolicy={dataSaver ? 'memory' : 'memory-disk'}
-          />
+          {!imageFailed && safeArticle.hasImage && safeArticle.imageUrl ? (
+            <Image
+              source={{ uri: safeArticle.imageUrl }}
+              style={styles.image}
+              contentFit={dataSaver ? 'contain' : 'cover'}
+              transition={100}
+              cachePolicy={dataSaver ? 'memory' : 'memory-disk'}
+              onError={onImageError}
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Text style={styles.placeholderText} numberOfLines={2}>
+                {(safeArticle.displaySourceName || sourceAbbrev).toUpperCase()}
+              </Text>
+            </View>
+          )}
 
           {safeArticle.isBreaking && (
             <View style={styles.breakingBadge}>
@@ -235,7 +316,33 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.category}>{safeArticle.category}</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.category} numberOfLines={1}>
+              {CATEGORIES[safeArticle.category]?.name || safeArticle.category}
+            </Text>
+            {(validSourceIcon || safeArticle.displaySourceName) && (
+              <>
+                <View style={styles.dotSeparator} />
+                {validSourceIcon ? (
+                  <Image
+                    source={{ uri: validSourceIcon }}
+                    style={[styles.sourceLogo, { opacity: 0.9 }]}
+                    contentFit="contain"
+                    accessibilityLabel={safeArticle.displaySourceName || 'Source'}
+                  />
+                ) : (
+                  <View style={styles.sourceBadge}>
+                    <Text
+                      style={[styles.sourceText, { maxWidth: 120, opacity: 0.85 }]}
+                      numberOfLines={1}
+                    >
+                      {sourceAbbrev}
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
             {isRead(articleId) && <View style={styles.readIndicator} />}
@@ -244,35 +351,39 @@ export default function NewsCard({ article, onPress, size = 'large' }) {
             </Text>
           </View>
 
-          {size !== 'small' && (
+          {size !== 'small' && showSummary && safeArticle.summary && (
             <Text style={styles.summary} numberOfLines={2}>
               {safeArticle.summary}
             </Text>
           )}
 
           <View style={styles.footer}>
-            <View style={styles.authorInfo}>
-              <Text style={styles.authorText}>
-                {safeArticle.author} • {formatDate(safeArticle.publishDate)}
-              </Text>
-            </View>
-            <Text style={styles.readTime}>{safeArticle.readTime}</Text>
+            <Text style={[styles.authorText, { flex: 1 }]} numberOfLines={1}>
+              {metaLine}
+            </Text>
           </View>
-
-          {size === 'large' && (
-            <View style={styles.engagement}>
-              <View style={styles.engagementItem}>
-                <Ionicons name="heart-outline" size={14} color={theme.textSecondary} />
-                <Text style={styles.engagementText}>{formatNumber(safeArticle.likes)}</Text>
-              </View>
-              <View style={styles.engagementItem}>
-                <Ionicons name="share-outline" size={14} color={theme.textSecondary} />
-                <Text style={styles.engagementText}>{formatNumber(safeArticle.shares)}</Text>
-              </View>
-            </View>
-          )}
         </View>
       </TouchableOpacity>
     </View>
   )
 }
+
+// Memoize to avoid unnecessary re-renders in large lists
+export default React.memo(NewsCard, (prev, next) => {
+  const a = prev.article
+  const b = next.article
+  if (a === b) return prev.showSummary === next.showSummary && prev.size === next.size
+  // Basic shallow comparisons for key props used in UI
+  return (
+    a?.id === b?.id &&
+    a?.title === b?.title &&
+    a?.imageUrl === b?.imageUrl &&
+    a?.category === b?.category &&
+    a?.publishDate === b?.publishDate &&
+    a?.readTime === b?.readTime &&
+    a?.sourceIcon === b?.sourceIcon &&
+    a?.displaySourceName === b?.displaySourceName &&
+    prev.showSummary === next.showSummary &&
+    prev.size === next.size
+  )
+})

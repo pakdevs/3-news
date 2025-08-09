@@ -21,6 +21,7 @@ import {
   unregisterBackgroundFetchAsync,
   runPrefetchNow,
 } from '../utils/background.js'
+import { APP_CONFIG } from '../utils/config'
 
 export default function SettingsScreen({ navigation }) {
   const { theme, isDark, toggleTheme } = useTheme()
@@ -292,6 +293,7 @@ export default function SettingsScreen({ navigation }) {
             autoDownload: false,
             dataSync: true,
             analytics: true,
+            wifiOnly: false,
           })
           Alert.alert('Success', 'Settings reset to defaults')
         },
@@ -309,10 +311,12 @@ export default function SettingsScreen({ navigation }) {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            Alert.alert(
-              'Account Deletion',
-              'To delete your account, please contact support@pakistantribune.example.com.'
-            )
+            const email = APP_CONFIG?.social?.email
+            const msg =
+              email && !String(email).includes('example.com')
+                ? `To delete your account, please contact ${email}.`
+                : 'To delete your account, please contact our support team.'
+            Alert.alert('Account Deletion', msg)
           },
         },
       ]

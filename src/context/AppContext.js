@@ -29,6 +29,8 @@ export const AppProvider = ({ children }) => {
   const [isOffline, setIsOffline] = useState(false)
   const [offlineArticles, setOfflineArticles] = useState([])
   const [dataSaver, setDataSaver] = useState(false)
+  // Region selection: 'pk' (Pakistan) or 'world'
+  const [region, setRegion] = useState('pk')
 
   useEffect(() => {
     loadAppData()
@@ -94,6 +96,7 @@ export const AppProvider = ({ children }) => {
         savedReadArticles,
         savedUser,
         savedOfflineArticles,
+        savedRegion,
       ] = await Promise.all([
         AsyncStorage.getItem('bookmarks'),
         AsyncStorage.getItem('readLater'),
@@ -102,6 +105,7 @@ export const AppProvider = ({ children }) => {
         AsyncStorage.getItem('readArticles'),
         AsyncStorage.getItem('user'),
         AsyncStorage.getItem('offlineArticles'),
+        AsyncStorage.getItem('region'),
         AsyncStorage.getItem('dataSaver'),
       ])
 
@@ -135,7 +139,9 @@ export const AppProvider = ({ children }) => {
         setReadArticles(readArticlesWithStringIds)
       }
 
-      if (savedUser) setUser(JSON.parse(savedUser))
+      if (savedUser) {
+        setUser(JSON.parse(savedUser))
+      }
 
       // Process offline articles: ensure IDs are strings
       if (savedOfflineArticles) {
@@ -147,14 +153,15 @@ export const AppProvider = ({ children }) => {
         setOfflineArticles(offlineWithStringIds)
       }
 
-      if (savedUser) setUser(JSON.parse(savedUser))
-
       // Data saver
-      if (arguments[0]) {
-        // no-op to keep arg index stable
-      }
       const dataSaverRaw = await AsyncStorage.getItem('dataSaver')
       if (dataSaverRaw !== null) setDataSaver(dataSaverRaw === 'true')
+
+      // Region selection
+      if (savedRegion) {
+        const r = JSON.parse(savedRegion)
+        if (r === 'pk' || r === 'world') setRegion(r)
+      }
     } catch (_error) {}
   }
 
@@ -311,6 +318,15 @@ export const AppProvider = ({ children }) => {
     await AsyncStorage.setItem('dataSaver', next ? 'true' : 'false')
   }
 
+  const changeRegion = async (nextRegion) => {
+    const valid = nextRegion === 'pk' || nextRegion === 'world'
+    const value = valid ? nextRegion : 'pk'
+    setRegion(value)
+    try {
+      await AsyncStorage.setItem('region', JSON.stringify(value))
+    } catch {}
+  }
+
   const value = {
     // Bookmarks
     bookmarks,
@@ -350,6 +366,10 @@ export const AppProvider = ({ children }) => {
     // Network/Data
     dataSaver,
     toggleDataSaver,
+
+    // Region
+    region,
+    setRegion: changeRegion,
 
     // User
     user,

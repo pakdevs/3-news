@@ -1,4 +1,4 @@
-import React from 'react'
+import * as React from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { Drawer } from 'expo-router/drawer'
 import { ThemeProvider, useTheme } from '../src/context/ThemeContext'

@@ -10,7 +10,9 @@ export default function SearchPage() {
   const navigationCompat = {
     navigate: (route: string, params?: any) => {
       if (route === 'ArticleDetail') {
-        router.push(`/article/${params?.article?.id}`)
+        const id = params?.article?.id
+        const payload = params?.article ? encodeURIComponent(JSON.stringify(params.article)) : ''
+        router.push({ pathname: `/article/${id}`, params: payload ? { article: payload } : {} })
       } else if (route === 'Search') {
         router.push('/search')
       } else if (route === 'Category') {

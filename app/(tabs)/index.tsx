@@ -1,4 +1,3 @@
-import { View } from 'react-native'
 import HomeScreen from '../../src/screens/HomeScreen'
 import { useRouter } from 'expo-router'
 import { DrawerActions } from '@react-navigation/native'
@@ -12,7 +11,9 @@ export default function HomePage() {
   const navigationCompat = {
     navigate: (route: string, params?: any) => {
       if (route === 'ArticleDetail') {
-        router.push(`/article/${params?.article?.id}`)
+        const id = params?.article?.id
+        const payload = params?.article ? encodeURIComponent(JSON.stringify(params.article)) : ''
+        router.push({ pathname: `/article/${id}`, params: payload ? { article: payload } : {} })
       } else if (route === 'Search') {
         router.push('/search')
       } else if (route === 'Category') {

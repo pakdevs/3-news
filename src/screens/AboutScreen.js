@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert } 
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
+import { APP_CONFIG } from '../utils/config'
 
 export default function AboutScreen({ navigation }) {
   const { theme } = useTheme()
@@ -196,40 +197,18 @@ export default function AboutScreen({ navigation }) {
     'Advanced search functionality',
     'Social sharing capabilities',
   ]
-
-  const links = [
-    {
-      icon: 'globe-outline',
-      title: 'Website',
-      url: 'https://pakistantribune.example.com',
-      description: 'Visit our website',
-    },
-    {
-      icon: 'logo-twitter',
-      title: 'Twitter',
-      url: 'https://twitter.com/PakTribuneApp',
-      description: '@PakTribuneApp',
-    },
-    {
-      icon: 'logo-facebook',
-      title: 'Facebook',
-      url: 'https://facebook.com/PakTribuneApp',
-      description: 'Follow us on Facebook',
-    },
-    {
-      icon: 'logo-instagram',
-      title: 'Instagram',
-      url: 'https://instagram.com/PakTribuneApp',
-      description: '@PakTribuneApp',
-    },
+  // Build social links from config and hide placeholders (example.com)
+  const rawSocial = APP_CONFIG?.social || {}
+  const linkDefs = [
+    { key: 'website', icon: 'globe-outline', title: 'Website', description: 'Visit our website' },
+    { key: 'twitter', icon: 'logo-twitter', title: 'Twitter', description: '@PakTribuneApp' },
+    { key: 'facebook', icon: 'logo-facebook', title: 'Facebook', description: 'Follow us' },
+    { key: 'instagram', icon: 'logo-instagram', title: 'Instagram', description: '@PakTribuneApp' },
+    { key: 'email', icon: 'mail-outline', title: 'Email', description: 'Contact support' },
   ]
-
-  const teamMembers = [
-    { name: 'Sarah Johnson', role: 'CEO & Founder' },
-    { name: 'Michael Chen', role: 'CTO' },
-    { name: 'Emily Rodriguez', role: 'Head of Product' },
-    { name: 'David Park', role: 'Lead Developer' },
-  ]
+  const links = linkDefs
+    .map((d) => ({ ...d, url: rawSocial[d.key] }))
+    .filter((l) => l.url && !String(l.url).includes('example.com'))
 
   return (
     <SafeAreaView style={styles.container}>
@@ -282,54 +261,34 @@ export default function AboutScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Connect With Us</Text>
-          <View style={styles.linkSection}>
-            {links.map((link, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[styles.linkItem, index === links.length - 1 && styles.lastLinkItem]}
-                onPress={() => handleLinkPress(link.url)}
-              >
-                <Ionicons
-                  name={link.icon}
-                  size={24}
-                  color={theme.textSecondary}
-                  style={styles.linkIcon}
-                />
-                <View>
-                  <Text style={styles.linkText}>{link.title}</Text>
-                  <Text style={styles.linkUrl}>{link.description}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-              </TouchableOpacity>
-            ))}
+        {links.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Connect With Us</Text>
+            <View style={styles.linkSection}>
+              {links.map((link, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.linkItem, index === links.length - 1 && styles.lastLinkItem]}
+                  onPress={() => handleLinkPress(link.url)}
+                >
+                  <Ionicons
+                    name={link.icon}
+                    size={24}
+                    color={theme.textSecondary}
+                    style={styles.linkIcon}
+                  />
+                  <View>
+                    <Text style={styles.linkText}>{link.title}</Text>
+                    <Text style={styles.linkUrl}>{link.description}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* Team Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Our Team</Text>
-          <View style={styles.teamSection}>
-            {teamMembers.map((member, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.teamMember,
-                  index === teamMembers.length - 1 && styles.lastTeamMember,
-                ]}
-              >
-                <View style={styles.memberAvatar}>
-                  <Ionicons name="person" size={20} color="#fff" />
-                </View>
-                <View style={styles.memberInfo}>
-                  <Text style={styles.memberName}>{member.name}</Text>
-                  <Text style={styles.memberRole}>{member.role}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
+        {/* Team section removed to avoid placeholder content */}
 
         {/* Contact Section */}
         <View style={styles.section}>
@@ -337,35 +296,41 @@ export default function AboutScreen({ navigation }) {
           <Text style={styles.sectionText}>
             Have questions, feedback, or need help? We'd love to hear from you!
           </Text>
-          <Text style={styles.sectionText}>
-            Email us at{' '}
-            <Text
-              style={styles.legalLink}
-              onPress={() => handleEmailPress('support@pakistantribune.example.com')}
-            >
-              support@pakistantribune.example.com
-            </Text>{' '}
-            or reach out through our social media channels.
-          </Text>
+          {APP_CONFIG?.social?.email && !APP_CONFIG.social.email.includes('example.com') && (
+            <Text style={styles.sectionText}>
+              Email us at{' '}
+              <Text
+                style={styles.legalLink}
+                onPress={() => handleEmailPress(APP_CONFIG.social.email)}
+              >
+                {APP_CONFIG.social.email}
+              </Text>{' '}
+              or reach out through our social media channels.
+            </Text>
+          )}
         </View>
 
         {/* Legal Section */}
         <View style={styles.legalSection}>
           <Text style={styles.legalText}>© 2025 The Pakistan Tribune. All rights reserved.</Text>
           <Text style={styles.legalText}>
-            <Text
-              style={styles.legalLink}
-              onPress={() => handleLinkPress('https://pakistantribune.example.com/privacy')}
-            >
-              Privacy Policy
-            </Text>
+            {APP_CONFIG?.legal?.privacy && !APP_CONFIG.legal.privacy.includes('example.com') && (
+              <Text
+                style={styles.legalLink}
+                onPress={() => handleLinkPress(APP_CONFIG.legal.privacy)}
+              >
+                Privacy Policy
+              </Text>
+            )}
             {' • '}
-            <Text
-              style={styles.legalLink}
-              onPress={() => handleLinkPress('https://pakistantribune.example.com/terms')}
-            >
-              Terms of Service
-            </Text>
+            {APP_CONFIG?.legal?.terms && !APP_CONFIG.legal.terms.includes('example.com') && (
+              <Text
+                style={styles.legalLink}
+                onPress={() => handleLinkPress(APP_CONFIG.legal.terms)}
+              >
+                Terms of Service
+              </Text>
+            )}
           </Text>
           <Text style={styles.legalText}>Made with ❤️ for news enthusiasts worldwide</Text>
         </View>

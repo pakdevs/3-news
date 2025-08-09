@@ -1,16 +1,19 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
 import { useApp } from '../context/AppContext'
-import { categories } from '../data/newsData'
+import { CATEGORIES } from '../utils/config'
 import { useRouter } from 'expo-router'
 import { DrawerContentScrollView } from '@react-navigation/drawer'
+import { getRegionTop, getRegionCategory } from '../utils/api'
 
 export default function CustomDrawerContent(props) {
   const { theme, toggleTheme, isDark } = useTheme()
-  const { user, logout, offlineArticles } = useApp()
+  const { user, logout, offlineArticles, region, setRegion } = useApp()
   const router = useRouter()
+  const [visibleCategories, setVisibleCategories] = useState(Object.entries(CATEGORIES))
+  const [catCounts, setCatCounts] = useState({})
 
   const styles = StyleSheet.create({
     container: {
@@ -53,14 +56,14 @@ export default function CustomDrawerContent(props) {
       fontWeight: 'bold',
     },
     section: {
-      marginVertical: 10,
+      marginVertical: 6,
     },
     sectionTitle: {
       fontSize: 14,
       fontWeight: 'bold',
       color: theme.textSecondary,
       paddingHorizontal: 20,
-      paddingVertical: 8,
+      paddingVertical: 4,
       textTransform: 'uppercase',
     },
     categoryItem: {
@@ -102,7 +105,87 @@ export default function CustomDrawerContent(props) {
       borderTopColor: theme.border,
       paddingTop: 10,
     },
+    editionRow: {
+      flexDirection: 'row',
+      paddingHorizontal: 20,
+      paddingBottom: 2,
+      marginTop: 2,
+    },
+    editionButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+      marginRight: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    editionButtonActive: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    editionButtonText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    editionButtonTextActive: {
+      color: '#fff',
+    },
+    // Removed flag icon styles (no longer used for Pakistan button)
   })
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        // Initial counts from top stories (fast)
+        const items = await getRegionTop(region).catch(() => [])
+        if (!active) return
+        const counts = {}
+        for (const a of items) {
+          const slug = String(a?.category || '')
+            .toLowerCase()
+            .trim()
+          if (!slug) continue
+          counts[slug] = (counts[slug] || 0) + 1
+        }
+        setVisibleCategories(Object.entries(CATEGORIES))
+        setCatCounts(counts)
+
+        // Refine counts by fetching each category endpoint (except top)
+        const categorySlugs = Object.keys(CATEGORIES).filter((s) => s !== 'top')
+        const results = await Promise.all(
+          categorySlugs.map(async (slug) => {
+            try {
+              const list = await getRegionCategory(region, slug).catch(() => [])
+              return [slug, Array.isArray(list) ? list.length : 0]
+            } catch {
+              return [slug, 0]
+            }
+          })
+        )
+        if (!active) return
+        const refined = { ...counts }
+        for (const [slug, len] of results) {
+          if (len) refined[slug] = len
+        }
+        // Recompute top total as sum of refined category counts (excluding top itself)
+        const total = Object.entries(refined)
+          .filter(([s]) => s !== 'top')
+          .reduce((acc, [, v]) => acc + v, 0)
+        refined.top = total || refined.top || 0
+        setCatCounts(refined)
+      } catch {
+        // ignore
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [region])
 
   const navigateToCategory = (category) => {
     router.push(`/category/${category.slug}`)
@@ -142,6 +225,41 @@ export default function CustomDrawerContent(props) {
       </View>
 
       <DrawerContentScrollView {...props} showsVerticalScrollIndicator={false}>
+        {/* Region Toggle */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Edition</Text>
+          <View style={styles.editionRow}>
+            {[
+              { key: 'pk', label: 'Pakistan' },
+              { key: 'world', label: 'World' },
+            ].map((t) => {
+              const active = region === t.key
+              return (
+                <TouchableOpacity
+                  key={t.key}
+                  onPress={() => setRegion(t.key)}
+                  style={[styles.editionButton, active && styles.editionButtonActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                >
+                  {t.key === 'world' && (
+                    <Ionicons
+                      name="globe-outline"
+                      size={16}
+                      style={{ marginRight: 6 }}
+                      color={active ? '#fff' : theme.textSecondary}
+                    />
+                  )}
+                  <Text
+                    style={[styles.editionButtonText, active && styles.editionButtonTextActive]}
+                  >
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        </View>
         {/* Main Navigation */}
         <TouchableOpacity style={styles.categoryItem} onPress={() => router.push('/(tabs)')}>
           <Ionicons name="home-outline" size={24} color={theme.textSecondary} />
@@ -165,21 +283,33 @@ export default function CustomDrawerContent(props) {
           )}
         </TouchableOpacity>
 
-        {/* Categories Section */}
+        {/* Categories Section (region-aware) */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Categories</Text>
-          {categories.map((category) => (
+          {visibleCategories.map(([slug, meta]) => (
             <TouchableOpacity
-              key={category.id}
+              key={slug}
               style={styles.categoryItem}
-              onPress={() => navigateToCategory(category)}
+              onPress={() => navigateToCategory({ slug, name: meta.name })}
             >
               <Ionicons
-                name={getCategoryIcon(category.slug)}
+                name={getCategoryIcon(slug, meta?.icon)}
                 size={24}
                 color={theme.textSecondary}
               />
-              <Text style={styles.categoryText}>{category.name}</Text>
+              <Text style={styles.categoryText}>{meta.name}</Text>
+              {(() => {
+                const total = Object.values(catCounts).reduce((a, b) => a + b, 0)
+                const count = slug === 'top' ? total : catCounts[slug] || 0
+                if (count > 0) {
+                  return (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{String(count)}</Text>
+                    </View>
+                  )
+                }
+                return null
+              })()}
             </TouchableOpacity>
           ))}
         </View>
@@ -217,7 +347,12 @@ export default function CustomDrawerContent(props) {
   )
 }
 
-function getCategoryIcon(slug) {
+function getCategoryIcon(slug, preferredIcon) {
+  // Prefer configured icon if provided; try to use outline variant for drawer
+  if (preferredIcon && typeof preferredIcon === 'string') {
+    const outline = `${preferredIcon}-outline`
+    return outline
+  }
   const icons = {
     top: 'star-outline',
     technology: 'laptop-outline',

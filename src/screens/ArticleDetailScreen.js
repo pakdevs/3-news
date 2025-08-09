@@ -52,6 +52,7 @@ export default function ArticleDetailScreen({ navigation, route }) {
     content: rawArticle && rawArticle.content ? String(rawArticle.content) : '',
   }
   const { theme } = useTheme()
+  const appCtx = useApp()
   const {
     isBookmarked,
     addBookmark,
@@ -64,7 +65,7 @@ export default function ArticleDetailScreen({ navigation, route }) {
     isFollowingAuthor,
     followAuthor,
     unfollowAuthor,
-  } = useApp()
+  } = appCtx
 
   const [fontSize, setFontSize] = useState(16)
   const [liked, setLiked] = useState(false)
@@ -314,9 +315,12 @@ export default function ArticleDetailScreen({ navigation, route }) {
 
   const handleShare = async () => {
     try {
+      const shareUrl = rawArticle?.sourceUrl
+        ? String(rawArticle.sourceUrl)
+        : `news-app://article/${article.id}`
       const result = await Share.share({
         message: `Check out this article: ${article.title}\n\n${article.summary}`,
-        url: `https://pakistantribune.example.com/article/${article.id}`,
+        url: shareUrl,
         title: article.title,
       })
     } catch (error) {
@@ -407,9 +411,9 @@ export default function ArticleDetailScreen({ navigation, route }) {
         <Image
           source={{ uri: article.imageUrl }}
           style={styles.heroImage}
-          contentFit={useApp().dataSaver ? 'contain' : 'cover'}
+          contentFit={appCtx.dataSaver ? 'contain' : 'cover'}
           transition={150}
-          cachePolicy={useApp().dataSaver ? 'memory' : 'memory-disk'}
+          cachePolicy={appCtx.dataSaver ? 'memory' : 'memory-disk'}
         />
 
         <View style={styles.articleHeader}>

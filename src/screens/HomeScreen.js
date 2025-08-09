@@ -8,36 +8,33 @@ import NewsCard from '../components/NewsCard'
 import { ListSkeleton } from '../components/Skeletons'
 import OfflineBanner from '../components/OfflineBanner'
 import { FlashList } from '@shopify/flash-list'
-import {
-  newsArticles as localArticles,
-  breakingNews as localBreaking,
-  categories,
-} from '../data/newsData'
-import { getTopArticles } from '../utils/api'
+import { newsArticles as localArticles, breakingNews as localBreaking } from '../data/newsData'
+import { getRegionTop, getRegionCategory } from '../utils/api'
 import sanitizeArticle from '../utils/sanitizeArticle'
 import { Linking } from 'react-native'
-import { APP_CONFIG } from '../utils/config'
+import { APP_CONFIG, CATEGORIES } from '../utils/config'
 import { screenView } from '../utils/analytics'
 
 const { width } = Dimensions.get('window')
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen({ navigation, initialFeedTab = 'top' }) {
   const { theme } = useTheme()
   // Pull all needed values from useApp at the top level (do not call hooks inside helpers)
-  const { markAsRead, followedTopics, isOffline } = useApp()
+  const { markAsRead, followedTopics, isOffline, region, setRegion } = useApp()
   const [refreshing, setRefreshing] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('top')
-  const [feedTab, setFeedTab] = useState('top') // 'top' | 'foryou' | 'trending'
   const [loading, setLoading] = useState(true)
   const [articles, setArticles] = useState(localArticles)
   const [breaking, setBreaking] = useState(localBreaking)
+  const [categoryArticles, setCategoryArticles] = useState({}) // cache per category slug
+  const [categoryLoading, setCategoryLoading] = useState(false)
 
   useEffect(() => {
     let isMounted = true
     async function load() {
       screenView('Home')
       try {
-        const remote = await getTopArticles().catch(() => [])
+        const remote = await getRegionTop(region).catch(() => [])
         if (!isMounted) return
         if (remote && remote.length) {
           setArticles(remote)
@@ -53,10 +50,13 @@ export default function HomeScreen({ navigation }) {
       }
     }
     load()
+    // Reset category when switching editions to avoid empty mismatched filters
+    setSelectedCategory('top')
+    setCategoryArticles({})
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [region])
 
   const styles = StyleSheet.create({
     container: {
@@ -75,6 +75,49 @@ export default function HomeScreen({ navigation }) {
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 12,
+    },
+    editionRow: {
+      flexDirection: 'row',
+      marginBottom: 0,
+    },
+    editionButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+      marginRight: 8,
+    },
+    editionButtonActive: {
+      backgroundColor: theme.primary,
+      borderColor: theme.primary,
+    },
+    editionButtonText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    editionButtonTextActive: {
+      color: '#fff',
+    },
+    navRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      marginBottom: 8,
+    },
+    verticalSeparator: {
+      width: 1,
+      height: 28,
+      backgroundColor: theme.border,
+      marginHorizontal: 8,
+    },
+    separator: {
+      height: 1,
+      backgroundColor: theme.border,
+      marginHorizontal: 16,
+      marginBottom: 8,
     },
     menuButton: {
       padding: 4,
@@ -136,13 +179,13 @@ export default function HomeScreen({ navigation }) {
       color: '#fff',
     },
     categoryScrollView: {
-      paddingHorizontal: 16,
+      paddingHorizontal: 8,
     },
     categoryTab: {
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      marginRight: 12,
-      borderRadius: 20,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      marginRight: 8,
+      borderRadius: 6,
       backgroundColor: theme.surface,
       borderWidth: 1,
       borderColor: theme.border,
@@ -152,7 +195,7 @@ export default function HomeScreen({ navigation }) {
       borderColor: theme.primary,
     },
     categoryTabText: {
-      fontSize: 14,
+      fontSize: 12,
       fontWeight: '600',
       color: theme.textSecondary,
     },
@@ -175,11 +218,17 @@ export default function HomeScreen({ navigation }) {
     },
   })
 
+  // Derive categories list from config (single source of truth)
+  const categoriesList = React.useMemo(
+    () => Object.entries(CATEGORIES).map(([slug, meta]) => ({ id: slug, slug, name: meta.name })),
+    []
+  )
+
   const onRefresh = React.useCallback(() => {
     setRefreshing(true)
     ;(async () => {
       try {
-        const remote = await getTopArticles().catch(() => [])
+        const remote = await getRegionTop(region).catch(() => [])
         if (remote && remote.length) {
           setArticles(remote)
           const topBreaking = remote.filter((a) => a.isBreaking).slice(0, 5)
@@ -192,7 +241,7 @@ export default function HomeScreen({ navigation }) {
         setRefreshing(false)
       }
     })()
-  }, [])
+  }, [region])
 
   const handleArticlePress = async (article) => {
     markAsRead(article.id)
@@ -216,33 +265,62 @@ export default function HomeScreen({ navigation }) {
   }
 
   const getFilteredArticles = () => {
-    let base = []
-    if (feedTab === 'trending') {
-      base = [...articles].sort((a, b) => b.likes + b.shares - (a.likes + a.shares))
-    } else if (feedTab === 'foryou') {
-      // For You: prioritize followed topics if any; fallback to top
-      if (followedTopics && followedTopics.length) {
-        const slugs = new Set(followedTopics.map((t) => t.slug))
-        base = articles.filter((a) => slugs.has(a.category))
-      } else {
-        base = articles
-      }
-    } else {
-      base = articles
-    }
+    let base = articles
     if (selectedCategory === 'top') return base
-    return base.filter((article) => article.category === selectedCategory)
+    if (categoryArticles[selectedCategory]) return categoryArticles[selectedCategory]
+    // fallback quick filter while network fetch in progress
+    return base.filter(
+      (article) => String(article.category || '').toLowerCase() === selectedCategory.toLowerCase()
+    )
   }
 
-  const renderBreakingNewsItem = ({ item }) => (
-    <View style={styles.breakingCard}>
-      <NewsCard article={item} onPress={() => handleArticlePress(item)} size="medium" />
-    </View>
-  )
+  // Fetch category-specific articles when selecting a non-top category
+  useEffect(() => {
+    if (selectedCategory === 'top') {
+      setCategoryLoading(false)
+      return
+    }
+    // If already cached for current region, skip fetch
+    if (categoryArticles[selectedCategory]) return
+    let active = true
+    setCategoryLoading(true)
+    ;(async () => {
+      try {
+        const remote = await getRegionCategory(region, selectedCategory).catch(() => [])
+        if (!active) return
+        if (Array.isArray(remote) && remote.length) {
+          const normalized = remote.map((a) => {
+            const rawCat = String(a?.category || '').toLowerCase()
+            if (rawCat === 'top' || rawCat === 'general' || rawCat === '') {
+              return { ...a, category: selectedCategory }
+            }
+            return a
+          })
+          setCategoryArticles((prev) => ({ ...prev, [selectedCategory]: normalized }))
+          return
+        }
+        // fallback: filter current top stories
+        const filtered = articles.filter(
+          (a) => String(a?.category || '').toLowerCase() === String(selectedCategory).toLowerCase()
+        )
+        if (filtered.length) {
+          const normalizedFiltered = filtered.map((a) => ({ ...a, category: selectedCategory }))
+          setCategoryArticles((prev) => ({ ...prev, [selectedCategory]: normalizedFiltered }))
+        }
+      } finally {
+        if (active) setCategoryLoading(false)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [selectedCategory, region, articles])
+
+  // note: inline renderers only
 
   const renderCategoryTab = (category) => (
     <TouchableOpacity
-      key={category.id}
+      key={category.slug}
       style={[styles.categoryTab, selectedCategory === category.slug && styles.activeCategoryTab]}
       onPress={() => handleCategoryChange(category.slug)}
     >
@@ -276,49 +354,58 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Category Tabs */}
-        <View style={styles.categoryTabs}>
+        {/* Edition + Category Tabs (single row) */}
+        <View style={styles.navRow}>
+          <View style={styles.editionRow}>
+            {[
+              { key: 'pk', label: 'Pakistan' },
+              { key: 'world', label: 'World' },
+            ].map((t) => (
+              <TouchableOpacity
+                key={t.key}
+                onPress={() => setRegion(t.key)}
+                style={[styles.editionButton, region === t.key && styles.editionButtonActive]}
+              >
+                <Text
+                  style={[
+                    styles.editionButtonText,
+                    region === t.key && styles.editionButtonTextActive,
+                  ]}
+                >
+                  {t.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.verticalSeparator} />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoryScrollView}
+            style={{ flex: 1 }}
           >
-            {categories.map(renderCategoryTab)}
+            {categoriesList.map(renderCategoryTab)}
           </ScrollView>
         </View>
       </View>
 
-      {/* Feed tabs */}
-      <View style={styles.feedTabs}>
-        {[
-          { key: 'top', label: 'Top' },
-          { key: 'foryou', label: 'For You' },
-          { key: 'trending', label: 'Trending' },
-        ].map((t) => (
-          <TouchableOpacity
-            key={t.key}
-            onPress={() => setFeedTab(t.key)}
-            style={[styles.feedTab, feedTab === t.key && styles.activeFeedTab]}
-          >
-            <Text style={[styles.feedTabText, feedTab === t.key && styles.activeFeedTabText]}>
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       {/* Main content list */}
       <View style={{ flex: 1 }}>
-        {loading ? (
+        {loading || categoryLoading ? (
           <View style={{ paddingHorizontal: 16 }}>
             <ListSkeleton count={5} />
           </View>
         ) : (
           <FlashList
-            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16, flexGrow: 1 }}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
             data={getFilteredArticles()}
             renderItem={({ item }) => (
-              <NewsCard article={item} onPress={() => handleArticlePress(item)} size="large" />
+              <NewsCard
+                article={item}
+                onPress={() => handleArticlePress(item)}
+                size="large"
+                showSummary={false}
+              />
             )}
             keyExtractor={(item) => item.id}
             estimatedItemSize={280}
@@ -340,6 +427,7 @@ export default function HomeScreen({ navigation }) {
                             article={item}
                             onPress={() => handleArticlePress(item)}
                             size="medium"
+                            showSummary={false}
                           />
                         </View>
                       ))}
@@ -350,19 +438,12 @@ export default function HomeScreen({ navigation }) {
                 {/* Section Title and optional hint */}
                 <View style={{ paddingHorizontal: 0 }}>
                   <Text style={styles.sectionTitle}>
-                    {feedTab === 'foryou'
-                      ? 'For You'
-                      : feedTab === 'trending'
-                      ? 'Trending'
-                      : selectedCategory === 'top'
-                      ? 'Top Stories'
-                      : categories.find((cat) => cat.slug === selectedCategory)?.name || 'News'}
+                    {selectedCategory === 'top'
+                      ? `${region === 'pk' ? 'Pakistan' : 'World'} — Top Stories`
+                      : `${region === 'pk' ? 'Pakistan' : 'World'} — ${
+                          CATEGORIES[selectedCategory]?.name || 'News'
+                        }`}
                   </Text>
-                  {feedTab === 'foryou' && getFilteredArticles().length === 0 ? (
-                    <Text style={styles.loadingText}>
-                      Follow some topics in Sections to personalize your feed.
-                    </Text>
-                  ) : null}
                 </View>
               </View>
             }

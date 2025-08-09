@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  FlatList,
-} from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../context/ThemeContext'
@@ -15,8 +7,9 @@ import { useApp } from '../context/AppContext'
 import NewsCard from '../components/NewsCard'
 import { Linking } from 'react-native'
 import { APP_CONFIG } from '../utils/config'
-import { searchArticles as localSearch, categories } from '../data/newsData'
-import { searchArticlesApi } from '../utils/api'
+import { searchArticles as localSearch } from '../data/newsData'
+import { CATEGORIES } from '../utils/config'
+import { searchArticlesApi, getTopArticles } from '../utils/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { screenView } from '../utils/analytics'
 
@@ -28,6 +21,7 @@ export default function SearchScreen({ navigation }) {
   const [isSearching, setIsSearching] = useState(false)
   const [recentSearches, setRecentSearches] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [counts, setCounts] = useState({})
 
   const styles = StyleSheet.create({
     container: {
@@ -246,19 +240,52 @@ export default function SearchScreen({ navigation }) {
     return () => clearTimeout(t)
   }, [searchQuery])
 
-  const filterCategories = [{ id: 'all', name: 'All', slug: 'all' }, ...categories]
+  const filterCategories = React.useMemo(
+    () => [
+      { id: 'all', name: 'All', slug: 'all' },
+      ...Object.entries(CATEGORIES).map(([slug, meta]) => ({ id: slug, name: meta.name, slug })),
+    ],
+    []
+  )
 
-  const trendingTopics = [
-    { title: 'Artificial Intelligence', count: '2.5k' },
-    { title: 'Climate Change', count: '1.8k' },
-    { title: 'Space Exploration', count: '1.2k' },
-    { title: 'Cryptocurrency', count: '956' },
-    { title: 'Healthcare Innovation', count: '834' },
-  ]
+  // Load top articles once to derive trending categories
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const items = await getTopArticles().catch(() => [])
+        if (!active || !Array.isArray(items)) return
+        const map = {}
+        for (const it of items) {
+          const slug = String(it?.category || '')
+            .toLowerCase()
+            .trim()
+          if (!slug) continue
+          map[slug] = (map[slug] || 0) + 1
+        }
+        setCounts(map)
+      } finally {
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const trendingCategories = React.useMemo(() => {
+    const entries = Object.entries(counts)
+      .filter(([slug]) => slug !== 'top')
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+    return entries.map(([slug, count]) => ({
+      title: CATEGORIES[slug]?.name || slug,
+      count,
+    }))
+  }, [counts])
 
   const renderFilterTab = (category) => (
     <TouchableOpacity
-      key={category.id}
+      key={category.slug}
       style={[styles.filterTab, selectedCategory === category.slug && styles.activeFilterTab]}
       onPress={() => setSelectedCategory(category.slug)}
     >
@@ -328,21 +355,25 @@ export default function SearchScreen({ navigation }) {
               ))}
             </View>
 
-            {/* Trending Topics */}
-            <View style={styles.trendingTopics}>
-              <Text style={styles.sectionTitle}>Trending Topics</Text>
-              {trendingTopics.map((topic, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.trendingItem}
-                  onPress={() => handleRecentSearch(topic.title)}
-                >
-                  <Ionicons name="trending-up" size={20} color={theme.primary} />
-                  <Text style={styles.trendingText}>{topic.title}</Text>
-                  <Text style={styles.trendingCount}>{topic.count}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {/* Trending Categories (live) */}
+            {trendingCategories.length > 0 && (
+              <View style={styles.trendingTopics}>
+                <Text style={styles.sectionTitle}>Trending Categories</Text>
+                {trendingCategories.map((topic, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.trendingItem}
+                    onPress={() => handleRecentSearch(topic.title)}
+                  >
+                    <Ionicons name="trending-up" size={20} color={theme.primary} />
+                    <Text style={styles.trendingText}>{topic.title}</Text>
+                    <Text style={styles.trendingCount}>
+                      {topic.count} article{topic.count !== 1 ? 's' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </>
         ) : (
           // Search Results

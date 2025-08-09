@@ -261,9 +261,7 @@ export default function LoginScreen({ navigation }) {
     }, 1500)
   }
 
-  const handleSocialLogin = (provider) => {
-    Alert.alert('Unavailable', `${provider} login isn't available in this build.`)
-  }
+  // Social login is not implemented in this build; section removed for production
 
   const handleContinueAsGuest = () => {
     navigation.goBack()
@@ -448,30 +446,7 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Social Login */}
-          <View style={styles.socialSection}>
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Or continue with</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('Google')}
-            >
-              <Ionicons name="logo-google" size={20} color="#4285f4" />
-              <Text style={styles.socialButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={() => handleSocialLogin('Apple')}
-            >
-              <Ionicons name="logo-apple" size={20} color={theme.text} />
-              <Text style={styles.socialButtonText}>Continue with Apple</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Social Login removed */}
 
           {/* Guest Option */}
           <TouchableOpacity style={styles.guestButton} onPress={handleContinueAsGuest}>

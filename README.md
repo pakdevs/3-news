@@ -257,7 +257,7 @@ expo publish
 
 ## 📄 License
 
-This project is for educational and demonstration purposes.
+This repository contains a production-ready mobile news application built with Expo and React Native. Add a LICENSE file if you intend to open source the project, or keep it private for proprietary use.
 
 ## 🤝 Contributing
 
@@ -271,8 +271,18 @@ This project is for educational and demonstration purposes.
 
 For support and questions:
 
-- Email: support@newsapp.com
+- In-app: Settings → Support (opens your configured support channel)
+- Email: Set your support email in `src/utils/config.js` under `APP_CONFIG.social.email` (the app hides placeholder/example values). Once updated, it will appear in the About/Settings screens.
 - GitHub Issues: Create an issue in the repository
+
+### 🔧 Production configuration
+
+Before release, configure these values in `src/utils/config.js`:
+
+- `APP_CONFIG.social.website`, `twitter`, `facebook`, `instagram`, and `social.email`
+- `APP_CONFIG.legal.privacy`, `terms`, and `cookies`
+
+Note: any `example.com` placeholders are intentionally hidden in the UI until you provide real URLs/emails.
 
 ---
 

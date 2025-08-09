@@ -1,15 +1,15 @@
-import React from 'react'
-import { View, Text, TouchableOpacity } from 'react-native'
+import * as React from 'react'
 import { useRouter } from 'expo-router'
+import OnboardingScreen from '../src/screens/OnboardingScreen'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export default function Onboarding() {
   const router = useRouter()
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize: 22, marginBottom: 12 }}>Pick your interests (stub)</Text>
-      <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
-        <Text style={{ color: '#2563eb' }}>Continue</Text>
-      </TouchableOpacity>
-    </View>
-  )
+  const handleComplete = async () => {
+    try {
+      await AsyncStorage.setItem('onboarding_completed', 'true')
+    } catch {}
+    router.replace('/(tabs)')
+  }
+  return <OnboardingScreen onComplete={handleComplete} />
 }
