@@ -10,7 +10,7 @@ import { isValidUrl } from '../utils/helpers'
 // Aspect-ratio note: we dynamically apply backend-provided aspectRatio (clamped) when available
 
 // showSummary: opt-in flag (default true). For HomeScreen we will pass false for headline-only.
-function NewsCard({ article, onPress, size = 'large', showSummary = true }) {
+function NewsCard({ article, onPress, size = 'large', showSummary = true, showReadStatus = true }) {
   const { theme } = useTheme()
   const { isBookmarked, addBookmark, removeBookmark, isRead, dataSaver } = useApp()
   const [imageFailed, setImageFailed] = useState(false)
@@ -221,6 +221,22 @@ function NewsCard({ article, onPress, size = 'large', showSummary = true }) {
       backgroundColor: theme.primary,
       marginRight: 8,
     },
+    readBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.surfaceAlt || '#222',
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      marginRight: 8,
+    },
+    readBadgeText: {
+      color: theme.textSecondary,
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 0.5,
+      marginLeft: 4,
+    },
   })
 
   const handleBookmark = (e) => {
@@ -348,10 +364,13 @@ function NewsCard({ article, onPress, size = 'large', showSummary = true }) {
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            {isRead(articleId) && <View style={styles.readIndicator} />}
-            <Text style={[styles.title, isRead(articleId) && styles.readTitle]}>
-              {safeArticle.title}
-            </Text>
+            {showReadStatus && isRead(articleId) && (
+              <View style={styles.readBadge} accessibilityLabel="Already read" accessible>
+                <Ionicons name="checkmark-done" size={14} color={theme.primary} />
+                <Text style={styles.readBadgeText}>READ</Text>
+              </View>
+            )}
+            <Text style={[styles.title, isRead(articleId) && styles.readTitle]}>{safeArticle.title}</Text>
           </View>
 
           {size !== 'small' && showSummary && safeArticle.summary && (
@@ -375,7 +394,13 @@ function NewsCard({ article, onPress, size = 'large', showSummary = true }) {
 export default React.memo(NewsCard, (prev, next) => {
   const a = prev.article
   const b = next.article
-  if (a === b) return prev.showSummary === next.showSummary && prev.size === next.size
+  if (a === b) {
+    return (
+      prev.showSummary === next.showSummary &&
+      prev.size === next.size &&
+      prev.showReadStatus === next.showReadStatus
+    )
+  }
   // Basic shallow comparisons for key props used in UI
   return (
     a?.id === b?.id &&
@@ -387,6 +412,7 @@ export default React.memo(NewsCard, (prev, next) => {
     a?.sourceIcon === b?.sourceIcon &&
     a?.displaySourceName === b?.displaySourceName &&
     prev.showSummary === next.showSummary &&
-    prev.size === next.size
+    prev.size === next.size &&
+    prev.showReadStatus === next.showReadStatus
   )
 })
