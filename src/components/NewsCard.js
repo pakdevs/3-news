@@ -215,27 +215,13 @@ function NewsCard({ article, onPress, size = 'large', showSummary = true, showRe
     },
     // engagement styles removed
     readIndicator: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: theme.primary,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: theme.textSecondary,
+      opacity: 0.5,
       marginRight: 8,
-    },
-    readBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.surfaceAlt || '#222',
-      borderRadius: 12,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      marginRight: 8,
-    },
-    readBadgeText: {
-      color: theme.textSecondary,
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 0.5,
-      marginLeft: 4,
+      marginTop: 6,
     },
   })
 
@@ -365,10 +351,7 @@ function NewsCard({ article, onPress, size = 'large', showSummary = true, showRe
 
           <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
             {showReadStatus && isRead(articleId) && (
-              <View style={styles.readBadge} accessibilityLabel="Already read" accessible>
-                <Ionicons name="checkmark-done" size={14} color={theme.primary} />
-                <Text style={styles.readBadgeText}>READ</Text>
-              </View>
+              <View style={styles.readIndicator} accessibilityLabel="Read article" />
             )}
             <Text style={[styles.title, isRead(articleId) && styles.readTitle]}>{safeArticle.title}</Text>
           </View>
