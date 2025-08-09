@@ -7,7 +7,7 @@ import { useApp } from '../context/AppContext'
 import { CATEGORIES } from '../utils/config'
 import { isValidUrl } from '../utils/helpers'
 
-// width not used
+// Aspect-ratio note: we dynamically apply backend-provided aspectRatio (clamped) when available
 
 // showSummary: opt-in flag (default true). For HomeScreen we will pass false for headline-only.
 function NewsCard({ article, onPress, size = 'large', showSummary = true }) {
@@ -40,6 +40,13 @@ function NewsCard({ article, onPress, size = 'large', showSummary = true }) {
     shares: 0,
   }
   const articleId = safeArticle.id
+
+  // Clamp aspect ratio to a sane range to avoid extreme layout shifts
+  const clampedAspectRatio = useMemo(() => {
+    const ar = Number(article?.aspectRatio || safeArticle.aspectRatio)
+    if (!ar || !isFinite(ar) || ar <= 0) return null
+    return Math.min(2, Math.max(0.5, ar)) // clamp between 0.5 (tall) and 2 (wide)
+  }, [article?.aspectRatio, safeArticle.aspectRatio])
 
   // Validate source icon URL
   const validSourceIcon =
@@ -274,14 +281,22 @@ function NewsCard({ article, onPress, size = 'large', showSummary = true }) {
           {!imageFailed && safeArticle.hasImage && safeArticle.imageUrl ? (
             <Image
               source={{ uri: safeArticle.imageUrl }}
-              style={styles.image}
+              style={[
+                styles.image,
+                clampedAspectRatio && { aspectRatio: clampedAspectRatio, height: undefined },
+              ]}
               contentFit={dataSaver ? 'contain' : 'cover'}
               transition={100}
               cachePolicy={dataSaver ? 'memory' : 'memory-disk'}
               onError={onImageError}
             />
           ) : (
-            <View style={styles.imagePlaceholder}>
+            <View
+              style={[
+                styles.imagePlaceholder,
+                clampedAspectRatio && { aspectRatio: clampedAspectRatio, height: undefined },
+              ]}
+            >
               <Text style={styles.placeholderText} numberOfLines={2}>
                 {(safeArticle.displaySourceName || sourceAbbrev).toUpperCase()}
               </Text>
